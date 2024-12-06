@@ -470,6 +470,15 @@ func (ps Positions[T]) String() string {
 	return strings.Join(strs, ",")
 }
 
+func (ps Positions[T]) Contains(p Pos[T]) bool {
+	for _, tp := range ps {
+		if tp == p {
+			return true
+		}
+	}
+	return false
+}
+
 func (p Pos[T]) String() string {
 	return fmt.Sprintf("{x:%d, y:%d, z:%d}", p.X, p.Y, p.Z)
 }
