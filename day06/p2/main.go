@@ -3,223 +3,216 @@ package main
 import (
 	"fmt"
 	"github.com/mbordner/aoc2024/common/file"
-	"github.com/mbordner/aoc2024/common/geom"
 )
 
-// 976 too low
-// 1147 too low
-func main() {
-	visitedCount := 1
-	grid, x, y := getData("../test.txt")
+type Dir int
+type Grid [][]byte
 
-	dir := geom.North
-	for {
+const (
+	NORTH Dir = iota
+	EAST
+	SOUTH
+	WEST
+)
 
-		if grid[y][x] == '.' {
-			visitedCount++
-		}
-		if grid[y][x] != '^' && grid[y][x] != '+' {
-			if dir == geom.North || dir == geom.South {
-				if grid[y][x] == '-' {
-					grid[y][x] = '+'
-				} else {
-					grid[y][x] = '|'
-				}
-			} else {
-				if grid[y][x] == '|' {
-					grid[y][x] = '+'
-				} else {
-					grid[y][x] = '-'
-				}
-			}
-		}
+type State struct {
+	x int
+	y int
+	d Dir
+}
 
-		nx := x
-		ny := y
+type States []State
 
-		switch dir {
-		case geom.North:
-			ny--
-		case geom.East:
+func next(grid Grid, cur State) *State {
+	nx := cur.x
+	ny := cur.y
+	nd := cur.d
+
+	switch nd {
+	case NORTH:
+		ny--
+	case EAST:
+		nx++
+	case SOUTH:
+		ny++
+	case WEST:
+		nx--
+	}
+
+	ns := State{x: nx, y: ny, d: nd}
+
+	if ny < 0 || ny == len(grid) || nx < 0 || nx == len(grid[ny]) {
+		return nil
+	} else if grid[ny][nx] == '#' {
+		nx, ny = cur.x, cur.y
+		switch nd {
+		case NORTH:
+			nd = EAST
 			nx++
-		case geom.South:
+		case EAST:
+			nd = SOUTH
 			ny++
-		case geom.West:
+		case SOUTH:
+			nd = WEST
 			nx--
+		case WEST:
+			nd = NORTH
+			ny--
+		}
+		ns = State{x: cur.x, y: cur.y, d: nd}
+	}
+
+	return &ns
+}
+
+func main() {
+	filename := "../data.txt"
+	debug := false
+
+	grid, start := getData(filename)
+
+	path := States{start}
+
+	for {
+		cur := path[len(path)-1]
+
+		if debug {
+			if grid[cur.y][cur.x] != '^' && grid[cur.y][cur.x] != '+' {
+				if cur.d == NORTH || cur.d == SOUTH {
+					if grid[cur.y][cur.x] == '-' {
+						grid[cur.y][cur.x] = '+'
+					} else {
+						grid[cur.y][cur.x] = '|'
+					}
+				} else {
+					if grid[cur.y][cur.x] == '|' {
+						grid[cur.y][cur.x] = '+'
+					} else {
+						grid[cur.y][cur.x] = '-'
+					}
+				}
+			}
 		}
 
-		if ny < 0 || ny == len(grid) || nx < 0 || nx == len(grid[y]) {
+		ns := next(grid, cur)
+		if ns == nil {
 			break
-		} else if grid[ny][nx] == '#' {
-			switch dir {
-			case geom.North:
-				dir = geom.East
-			case geom.East:
-				dir = geom.South
-			case geom.South:
-				dir = geom.West
-			case geom.West:
-				dir = geom.North
+		}
+
+		if debug {
+			if cur.y == ns.y && cur.x == ns.x {
+				grid[cur.y][cur.x] = '+'
 			}
+		}
+
+		path = append(path, *ns)
+	}
+
+	visited := make(map[State]int)
+	for _, p := range path {
+		s := State{x: p.x, y: p.y}
+		if c, e := visited[s]; e {
+			visited[s] = c + 1
 		} else {
-			y = ny
-			x = nx
+			visited[s] = 1
 		}
 	}
 
-	for _, line := range grid {
-		fmt.Println(string(line))
-	}
+	obstacles := make(map[State]int)
 
-	visited := make(map[geom.Pos[int]]geom.Pos[int])
+	for i := 1; i < len(path); i++ {
+		obs := path[i]
 
-	for y, gridLine := range grid {
-		for x, b := range gridLine {
-			if b == '+' || b == '^' || b == '|' || b == '-' {
-				visited[geom.Pos[int]{X: x, Y: y, Z: 0}] = geom.Pos[int]{X: x, Y: y, Z: 0}
+		o := State{x: obs.x, y: obs.y}
+		if _, e := obstacles[o]; e || (obs.y == start.y && obs.x == start.x) { // if we already know, or this is starting position skip
+			continue
+		}
+
+		last := grid[obs.y][obs.x]
+		grid[obs.y][obs.x] = '#'
+
+		obsPath := States{path[0]}
+		obsVisited := make(map[State]bool)
+		obsVisited[path[0]] = true
+
+		looping := false
+
+		for {
+			cur := obsPath[len(obsPath)-1]
+
+			ns := next(grid, cur)
+			if ns == nil {
+				break
 			}
-		}
-	}
 
-	tls := make(geom.Positions[int], 0, len(visited))
-	trs := make(geom.Positions[int], 0, len(visited))
-	brs := make(geom.Positions[int], 0, len(visited))
-	bls := make(geom.Positions[int], 0, len(visited))
+			if _, e := obsVisited[*ns]; e {
+				looping = true
 
-	for p := range visited {
-		x := p.X
-		y := p.Y
-		if y > 0 && grid[y-1][x] == '#' {
-			tls = append(tls, p)
-		}
-		if x < len(grid[y])-1 && grid[y][x+1] == '#' {
-			trs = append(trs, p)
-		}
-		if y < len(grid)-1 && grid[y+1][x] == '#' {
-			brs = append(brs, p)
-		}
-		if x > 0 && grid[y][x-1] == '#' {
-			bls = append(bls, p)
-		}
-	}
-
-	// possibilities tl tr br  to find bl
-	pTlTrBr := make([]geom.Positions[int], 0, len(visited))
-	for _, tl := range tls {
-		for _, tr := range trs {
-			if tl.Y == tr.Y {
-				for _, br := range brs {
-					if tr.X == br.X {
-						pTlTrBr = append(pTlTrBr, geom.Positions[int]{tl, tr, br})
+				if debug {
+					ogrid, _ := getData(filename)
+					for _, s := range obsPath {
+						char := '^'
+						switch s.d {
+						case NORTH:
+							char = '^'
+						case EAST:
+							char = '>'
+						case SOUTH:
+							char = 'v'
+						case WEST:
+							char = '<'
+						}
+						ogrid[s.y][s.x] = byte(char)
 					}
-				}
-			}
-		}
-	}
-
-	// possibilities tr br bl  to find tl
-	pTrBrBl := make([]geom.Positions[int], 0, len(visited))
-	for _, tr := range trs {
-		for _, br := range brs {
-			if tr.X == br.X {
-				for _, bl := range bls {
-					if br.Y == bl.Y {
-						pTrBrBl = append(pTrBrBl, geom.Positions[int]{tr, br, bl})
+					ogrid[obs.y][obs.x] = 'O'
+					ogrid[obsPath[0].y][obsPath[0].x] = 'S'
+					ogrid[ns.y][ns.x] = '*'
+					fmt.Println("=====================")
+					for _, line := range ogrid {
+						fmt.Println(string(line))
 					}
+					fmt.Println("=====================")
 				}
+
+				break
+			} else {
+				obsVisited[*ns] = true
+			}
+			obsPath = append(obsPath, *ns)
+
+		}
+
+		grid[obs.y][obs.x] = last
+
+		if looping {
+			o = State{x: obs.x, y: obs.y}
+			if c, e := obstacles[o]; e {
+				obstacles[o] = c + 1
+			} else {
+				obstacles[o] = 1
 			}
 		}
 	}
 
-	// possibilities br bl tl  to find tr
-	pBrBlTl := make([]geom.Positions[int], 0, len(visited))
-	for _, br := range brs {
-		for _, bl := range bls {
-			if br.Y == bl.Y {
-				for _, tl := range tls {
-					if bl.X == tl.X {
-						pBrBlTl = append(pBrBlTl, geom.Positions[int]{br, bl, tl})
-					}
-				}
-			}
+	if debug {
+		for o := range obstacles {
+			grid[o.y][o.x] = 'O'
+		}
+		for _, line := range grid {
+			fmt.Println(string(line))
 		}
 	}
 
-	// possibilities bl tl tr  to find br
-	pBlTlTr := make([]geom.Positions[int], 0, len(visited))
-	for _, bl := range bls {
-		for _, tl := range tls {
-			if bl.X == tl.X {
-				for _, tr := range trs {
-					if tl.Y == tr.Y {
-						pBlTlTr = append(pBlTlTr, geom.Positions[int]{bl, tl, tr})
-					}
-				}
-			}
-		}
-	}
-
-	fmt.Println("pTlTrBr", pTlTrBr)
-	fmt.Println("pTrBrBl", pTrBrBl)
-	fmt.Println("pBrBlTl", pBrBlTl)
-	fmt.Println("pBlTlTr", pBlTlTr)
-
-	fmt.Println("visitedCount", visitedCount)
-
-	fmt.Println("searching for obstacle locations...")
-	obstacles := 0
-	for _, p := range pTlTrBr { // looking for bl
-		if c, e := visited[geom.Pos[int]{X: p[0].X, Y: p[2].Y, Z: 0}]; e {
-			if c.X > 0 {
-				obstacles++
-				fmt.Println(geom.Pos[int]{X: c.X - 1, Y: c.Y, Z: c.Z})
-				grid[c.Y][c.X-1] = 'O'
-			}
-		}
-	}
-
-	for _, p := range pTrBrBl { // searching for tl
-		if c, e := visited[geom.Pos[int]{X: p[2].X, Y: p[0].Y, Z: 0}]; e {
-			if c.Y > 0 {
-				obstacles++
-				fmt.Println(geom.Pos[int]{X: c.X, Y: c.Y - 1, Z: c.Z})
-				grid[c.Y-1][c.X] = 'O'
-			}
-		}
-	}
-
-	for _, p := range pBrBlTl { // searching for tr
-		if c, e := visited[geom.Pos[int]{X: p[0].X, Y: p[2].Y, Z: 0}]; e {
-			if c.X < len(grid[c.Y])-1 {
-				obstacles++
-				fmt.Println(geom.Pos[int]{X: c.X + 1, Y: c.Y, Z: c.Z})
-				grid[c.Y][c.X+1] = 'O'
-			}
-		}
-	}
-
-	for _, p := range pBlTlTr { // searching for br
-		if c, e := visited[geom.Pos[int]{X: p[2].X, Y: p[0].Y, Z: 0}]; e {
-			if c.Y < len(grid)-1 {
-				obstacles++
-				fmt.Println(geom.Pos[int]{X: c.X, Y: c.Y + 1, Z: c.Z})
-				grid[c.Y+1][c.X] = 'O'
-			}
-
-		}
-	}
-
-	for _, line := range grid {
-		fmt.Println(string(line))
-	}
-
-	fmt.Println("total obstacles to place: ", obstacles)
+	fmt.Println("part one:")
+	fmt.Println(len(visited))
+	fmt.Println("part two:")
+	fmt.Println(len(obstacles))
 
 }
 
-func getData(f string) ([][]byte, int, int) {
+func getData(f string) (Grid, State) {
 	lines, _ := file.GetLines(f)
-	grid := make([][]byte, len(lines), len(lines))
+	grid := make(Grid, len(lines), len(lines))
 	var y, x int
 
 	found := false
@@ -237,5 +230,5 @@ func getData(f string) ([][]byte, int, int) {
 		}
 	}
 
-	return grid, x, y
+	return grid, State{x: x, y: y, d: NORTH}
 }
