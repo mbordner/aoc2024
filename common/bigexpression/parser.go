@@ -11,7 +11,7 @@ import (
 
 var (
 	reSpace       = regexp.MustCompile(`\s`)
-	reOperator    = regexp.MustCompile(`\+|\*|\-|\/`)
+	reOperator    = regexp.MustCompile(`\+|\*|\-|\/|\|`)
 	reDigits      = regexp.MustCompile(`^\d+$`)
 	reVariable    = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9]*$`)
 	precedenceMap = map[string]int{
@@ -19,6 +19,7 @@ var (
 		"/": 10,
 		"+": 5,
 		"-": 5,
+		"|": 1,
 	}
 )
 

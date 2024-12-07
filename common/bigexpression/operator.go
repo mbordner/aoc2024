@@ -41,6 +41,10 @@ func (o *Operator) Eval(vars map[string]*big.Int) *big.Int {
 		return big.NewInt(0).Mul(l, r)
 	case "/":
 		return big.NewInt(0).Div(l, r)
+	case "|":
+		n := new(big.Int)
+		n, _ = n.SetString(l.String()+r.String(), 10)
+		return n
 	}
 	panic(errors.New("unknown operator"))
 }
