@@ -45,3 +45,31 @@ func TestPopulateStringCombinationsAtLength(t *testing.T) {
 	}
 
 }
+
+func TestGetPairs(t *testing.T) {
+
+	tests := []struct {
+		values         []int
+		expectedLength int
+	}{
+		{
+			values:         []int{1, 2, 3},
+			expectedLength: 3,
+		},
+		{
+			values:         []int{1, 2, 3, 4},
+			expectedLength: 6,
+		},
+	}
+
+	for i, tc := range tests {
+		t.Run(fmt.Sprintf("test %d", i), func(t *testing.T) {
+			results := GetPairSets[int](tc.values)
+			assert.Equal(t, tc.expectedLength, len(results))
+			// binomial(n, 2)
+			// 1/2 (n - 1) n
+			assert.Equal(t, len(tc.values)*(len(tc.values)-1)/2, len(results))
+		})
+	}
+
+}
