@@ -1,5 +1,7 @@
 package common
 
+import "fmt"
+
 func PopulateStringCombinationsAtLength(results map[string]bool, pickChars string, prefix string, length int) {
 	if length == 0 {
 		results[prefix] = true
@@ -47,4 +49,35 @@ func Abs[T IntNumber](v T) T {
 		return v
 	}
 	return T(-1) * v
+}
+
+type Grid [][]byte
+type Pos struct {
+	Y int
+	X int
+}
+
+func (p Pos) String() string {
+	return fmt.Sprintf("{%d,%d}", p.X, p.Y)
+}
+
+type Positions []Pos
+
+func (g Grid) Contains(x, y int) bool {
+	if y >= 0 && y < len(g) && x >= 0 && x < len(g[y]) {
+		return true
+	}
+	return false
+}
+
+func (g Grid) ContainsPos(p Pos) bool {
+	return g.Contains(p.X, p.Y)
+}
+
+func ConvertGrid(lines []string) Grid {
+	grid := make(Grid, len(lines))
+	for i, line := range lines {
+		grid[i] = []byte(line)
+	}
+	return grid
 }
