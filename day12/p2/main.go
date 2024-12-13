@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/mbordner/aoc2024/common"
 	"github.com/mbordner/aoc2024/common/file"
+	"sort"
 )
 
 type Plant struct {
@@ -13,6 +14,10 @@ type Plant struct {
 	neighbors Plants
 	fences    map[Dir]bool
 }
+
+const (
+	debug = false
+)
 
 type Dir int
 
@@ -177,6 +182,58 @@ type Region struct {
 	plants Plants
 }
 
+func (r *Region) print() {
+	fmt.Println("Printing region ", r.plants[0].species)
+
+	var minX, minY, maxX, maxY int
+	minX = r.plants[0].pos.X
+	maxX = r.plants[0].pos.X
+	minY = r.plants[0].pos.Y
+	maxY = r.plants[0].pos.Y
+
+	ps := make(common.Positions, 0, len(r.plants))
+
+	for _, p := range r.plants {
+		if p.pos.X < minX {
+			minX = p.pos.X
+		}
+		if p.pos.X > maxX {
+			maxX = p.pos.X
+		}
+		if p.pos.Y < minY {
+			minY = p.pos.Y
+		}
+		if p.pos.Y > maxY {
+			maxY = p.pos.Y
+		}
+		ps = append(ps, p.pos)
+	}
+
+	rows := maxY - minY + 1
+	cols := maxX - minX + 1
+
+	for i := range ps {
+		ps[i].X -= minX
+		ps[i].Y -= minY
+	}
+
+	g := make(common.Grid, rows)
+	for y := range g {
+		g[y] = make([]byte, cols)
+		for x := 0; x < cols; x++ {
+			g[y][x] = ' '
+		}
+	}
+
+	for _, p := range ps {
+		g[p.Y][p.X] = '#'
+	}
+
+	for _, line := range g {
+		fmt.Println(string(line))
+	}
+}
+
 func (r *Region) area() int {
 	return len(r.plants)
 }
@@ -189,8 +246,36 @@ func (r *Region) perimeter() int {
 	return perimeter
 }
 
+type VectorStarts map[common.Pos][]Line
+
+func (s VectorStarts) add(l Line) {
+	p := l.p1
+	if ls, e := s[p]; e {
+		s[p] = append(ls, l)
+	} else {
+		s[p] = []Line{l}
+	}
+}
+
+func (s VectorStarts) del(l Line) {
+	p := l.p1
+	if ls, e := s[p]; e {
+		for i, o := range ls {
+			if o.p1 == l.p1 && o.p2 == l.p2 {
+				if len(ls) == 1 {
+					delete(s, p)
+				} else {
+					s[p] = append(ls[0:i], ls[i+1:]...)
+				}
+				break
+			}
+		}
+	}
+}
+
 func (r *Region) fences() []Line {
-	starts := make(map[common.Pos]Line)
+	starts := make(VectorStarts)
+
 	for _, p := range r.plants {
 
 		for d, e := range p.fences {
@@ -222,7 +307,7 @@ func (r *Region) fences() []Line {
 					pl.p2.X = p.pos.X
 					pl.p2.Y = p.pos.Y
 				}
-				starts[pl.p1] = pl
+				starts.add(pl)
 			}
 		}
 
@@ -231,16 +316,22 @@ func (r *Region) fences() []Line {
 	for {
 		merged := false
 
-		for start, l := range starts {
-			if o, e := starts[l.p2]; e {
-				r := (&l).merge(&o)
-				if r != nil {
-					starts[start] = *r
-					delete(starts, l.p2)
-					merged = true
-					break
+		for _, ls := range starts {
+			for _, l := range ls {
+				if os, e := starts[l.p2]; e {
+					for _, o := range os {
+						r := (&l).merge(&o)
+						if r != nil {
+							starts.del(l)
+							starts.del(o)
+							starts.add(*r)
+							merged = true
+							break
+						}
+					}
 				}
 			}
+
 		}
 
 		if !merged {
@@ -250,11 +341,13 @@ func (r *Region) fences() []Line {
 
 	fences := make([]Line, 0, len(starts))
 
-	for _, l := range starts {
-		fences = append(fences, l)
+	for _, ls := range starts {
+		for _, l := range ls {
+			fences = append(fences, l)
+		}
 	}
 
-	/*
+	if debug {
 		sort.Slice(fences, func(i, j int) bool {
 			if fences[i].p1.Y < fences[j].p1.Y {
 				return true
@@ -265,21 +358,11 @@ func (r *Region) fences() []Line {
 			return false
 		})
 
-		fmt.Println(fences)
-	*/
+		r.print()
+		fmt.Println(len(fences))
+	}
 
 	return fences
-}
-
-// 839354 too low
-func main() {
-	_, regions := getData("../data.txt")
-	sum := 0
-	for r := range regions {
-		fences := r.fences()
-		sum += r.area() * len(fences) // r.perimeter()
-	}
-	fmt.Println(sum)
 }
 
 func expand(grid common.Grid, garden Garden, plant *Plant) Plants {
@@ -348,6 +431,18 @@ func getData(f string) (Garden, Regions) {
 				r := &Region{}
 				r.plants = expand(grid, garden, p)
 
+				if debug {
+					sort.Slice(r.plants, func(i, j int) bool {
+						if r.plants[i].pos.Y > r.plants[j].pos.Y {
+							return false
+						}
+						if r.plants[i].pos.X > r.plants[j].pos.X {
+							return false
+						}
+						return true
+					})
+				}
+
 				for i := range r.plants {
 					r.plants[i].region = r
 				}
@@ -360,4 +455,21 @@ func getData(f string) (Garden, Regions) {
 	}
 
 	return garden, regions
+}
+
+// 839354 too low
+func main() {
+	_, regions := getData("../data.txt")
+	sum := 0
+	for r := range regions {
+		if debug {
+			if r.plants[0].species == "." {
+				continue
+			}
+		}
+		fences := r.fences()
+		area := r.area()
+		sum += area * len(fences) // r.perimeter()
+	}
+	fmt.Println(sum)
 }
