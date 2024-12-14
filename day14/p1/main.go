@@ -80,13 +80,15 @@ func main() {
 	robots := getData("../data.txt")
 
 	for i := 0; i < 100; i++ {
+
 		robots.move(cols, rows)
+		fmt.Println("=", i, "===================================================")
+		robots.print(cols, rows)
+
 	}
 
-	robots.print(cols, rows)
-
-	ya := rows / 2
-	xa := cols / 2
+	xa := rows / 2
+	ya := cols / 2
 
 	quads := make([]int, 4)
 
