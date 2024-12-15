@@ -4,19 +4,20 @@ import (
 	"fmt"
 	"github.com/mbordner/aoc2024/common/file"
 	"regexp"
-	"sort"
 	"strconv"
 )
 
 type Vector struct {
-	X int
-	Y int
+	X int64
+	Y int64
 }
 
 type Button struct {
-	Cost int
+	Cost int64
 	V    Vector
 }
+
+// max int64: 18446744073709551615
 
 type Machine struct {
 	A     Button
@@ -29,112 +30,65 @@ var (
 	rePrizeLine  = regexp.MustCompile(`^Prize:\s+X=(\d+), Y=(\d+)$`)
 )
 
-const (
-	maxPresses = 100
-)
-
 type State struct {
-	a int
-	b int
+	a int64
+	b int64
 	m *Machine
 }
 
-func (s State) cost() int {
+func (s State) cost() int64 {
 	return s.a*s.m.A.Cost + s.b*s.m.B.Cost
 }
 
-func (s State) checkGoal() int {
-	if s.a > maxPresses || s.b > maxPresses {
-		return 1
-	}
-	xa := s.a * s.m.A.V.X
-	xb := s.b * s.m.B.V.X
-	x := xa + xb
-	if x > s.m.Prize.X {
-		return 1
-	}
-	ya := s.a * s.m.A.V.Y
-	yb := s.b * s.m.B.V.Y
-	y := ya + yb
-	if y > s.m.Prize.Y {
-		return 1
-	}
-	if x == s.m.Prize.X && y == s.m.Prize.Y {
-		return 0
-	}
-	return -1
-}
-
-type Queue []State
-
-func (q *Queue) enqueue(s State) {
-	*q = append(*q, s)
-}
-
-func (q *Queue) empty() bool {
-	return len(*q) == 0
-}
-
-func (q *Queue) dequeue() *State {
-	if !q.empty() {
-		s := (*q)[0]
-		*q = (*q)[1:]
-		return &s
-	}
-	return nil
-}
-
-type Visited map[State]bool
-
-func (v Visited) has(s State) bool {
-	if b, e := v[s]; e {
-		return b
-	}
-	return false
-}
-
 func solve(m *Machine) []State {
-	solutions := make([]State, 0, 100)
+	solutions := make([]State, 0, 1)
 
-	queue := make(Queue, 0, 100)
-	initial := State{a: 0, b: 0, m: m}
-	queue.enqueue(initial)
-	visited := make(Visited)
-	visited[initial] = true
+	// Cramer's Rule to solve system of linear equations with 2 varialbes
+	// given A Vector ( ax, ay ) and B Vector ( bx, by )  and Prize Vector (px, py )
+	//    A * ax + B * bx = px
+	//    A * ay + B * by = py,   where A and B are our variables, number of button presses
 
-	for !queue.empty() {
-		cur := queue.dequeue()
-		g := cur.checkGoal()
-		if g == 0 {
-			solutions = append(solutions, *cur)
-		} else if g < 0 {
-			nextA := State{a: cur.a + 1, b: cur.b, m: m}
-			if !visited.has(nextA) {
-				visited[nextA] = true
-				queue.enqueue(nextA)
-			}
-			nextB := State{a: cur.a, b: cur.b + 1, m: m}
-			if !visited.has(nextB) {
-				visited[nextB] = true
-				queue.enqueue(nextB)
+	// determinate of 2 x 2 matrix
+	// [ a   b ]   ==  a*d - c*b
+	// [ c   d ]
+
+	// get determinate
+	// det [ ax  bx ]
+	//     [ ay  by ]   ax*by  - ay*bx
+	// deta [ px   bx ]
+	//      [ py   by ]    px*by - py*bx
+	// detb [ ax   px ]
+	//      [ ay   py ]   ax*py - ay*px
+	// then A = deta / det
+	//     B = detb / det
+	det := m.A.V.X*m.B.V.Y - m.A.V.Y*m.B.V.X
+	if det != 0 { // if it's 0, it can't solve for A & B because of divide by 0
+
+		solution := State{m: m}
+
+		deta := m.Prize.X*m.B.V.Y - m.Prize.Y*m.B.V.X
+		detb := m.A.V.X*m.Prize.Y - m.A.V.Y*m.Prize.X
+
+		solution.a = deta / det
+		solution.b = detb / det
+
+		if solution.a >= 0 && solution.b >= 0 {
+			// check due to rounding
+			if solution.a*m.A.V.X+solution.b*m.B.V.X == m.Prize.X &&
+				solution.a*m.A.V.Y+solution.b*m.B.V.Y == m.Prize.Y {
+				solutions = append(solutions, solution)
 			}
 		}
+
 	}
-
-	sort.Slice(solutions, func(i, j int) bool {
-		if solutions[i].cost() < solutions[j].cost() {
-			return true
-		}
-		return false
-	})
 
 	return solutions
 }
 
 func main() {
-	machines := getData("../test.txt")
+	machines := getData("../data.txt")
 
-	tokens := 0
+	tokens := int64(0)
 	for _, m := range machines {
 		solutions := solve(m)
 		if len(solutions) > 0 {
@@ -175,7 +129,7 @@ func getData(f string) []*Machine {
 			matches := rePrizeLine.FindStringSubmatch(line)
 			x := getIntVal("+", matches[1])
 			y := getIntVal("+", matches[2])
-			machine.Prize = Vector{X: x, Y: y}
+			machine.Prize = Vector{X: x + int64(10000000000000), Y: y + int64(10000000000000)}
 		}
 	}
 
@@ -186,10 +140,10 @@ func getData(f string) []*Machine {
 	return machines
 }
 
-func getIntVal(sign, num string) int {
+func getIntVal(sign, num string) int64 {
 	if sign == "-" {
 		num = sign + num
 	}
-	val, _ := strconv.ParseInt(num, 10, 32)
-	return int(val)
+	val, _ := strconv.ParseInt(num, 10, 64)
+	return int64(val)
 }
