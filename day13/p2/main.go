@@ -72,7 +72,7 @@ func solve(m *Machine) []State {
 		solution.a = deta / det
 		solution.b = detb / det
 
-		if solution.a >= 0 && solution.b >= 0 {
+		if (solution.a > 0 || solution.b > 0) && solution.a >= 0 && solution.b >= 0 {
 			// check due to rounding
 			if solution.a*m.A.V.X+solution.b*m.B.V.X == m.Prize.X &&
 				solution.a*m.A.V.Y+solution.b*m.B.V.Y == m.Prize.Y {
