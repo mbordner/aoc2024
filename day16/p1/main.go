@@ -99,7 +99,7 @@ func (ss States) cost() int {
 
 func main() {
 
-	r, grid := getData("../data.txt")
+	r, grid := getData("../test.txt")
 
 	queue := make(Queue, 0, 100)
 	initial := State{x: r.p.X, y: r.p.Y, d: r.d}

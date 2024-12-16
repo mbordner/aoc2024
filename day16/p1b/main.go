@@ -25,11 +25,11 @@ type NodeId struct {
 }
 
 func main() {
-	startId, goalId, g := getData("../test.txt")
+	startId, goalId, g := getData("../data.txt")
 
 	shortestPaths := djikstra.GenerateShortestPaths(g, g.GetNode(startId))
 	path, cost := shortestPaths.GetShortestPath(g.GetNode(goalId))
-	fmt.Println(len(shortestPaths), len(path), int(cost))
+	fmt.Println(len(path), int(cost))
 }
 
 func getData(f string) (NodeId, NodeId, *graph.Graph) {
