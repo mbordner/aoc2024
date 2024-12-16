@@ -1,11 +1,14 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
+	"github.com/jroimartin/gocui"
 	"github.com/mbordner/aoc2024/common"
 	"github.com/mbordner/aoc2024/common/file"
-	"os"
+	"io"
+	"log"
+	"strings"
+	"time"
 )
 
 const (
@@ -21,6 +24,26 @@ const (
 	leftBoxChar  = byte('[')
 	rightBoxChar = byte(']')
 )
+
+var (
+	Black   = Color("\033[1;30m%s\033[0m")
+	Red     = Color("\033[1;31m%s\033[0m")
+	Green   = Color("\033[1;32m%s\033[0m")
+	Yellow  = Color("\033[1;33m%s\033[0m")
+	Purple  = Color("\033[1;34m%s\033[0m")
+	Magenta = Color("\033[1;35m%s\033[0m")
+	Teal    = Color("\033[1;36m%s\033[0m")
+	Gray    = Color("\033[1;37m%s\033[0m")
+	White   = Color("\033[1;97m%s\033[0m")
+)
+
+func Color(colorString string) func(...interface{}) string {
+	sprint := func(args ...interface{}) string {
+		return fmt.Sprintf(colorString,
+			fmt.Sprint(args...))
+	}
+	return sprint
+}
 
 type Warehouse struct {
 	grid      common.Grid
@@ -71,7 +94,8 @@ func (wh *Warehouse) hasBox(p common.Pos) bool {
 	return false
 }
 
-func (wh *Warehouse) movePositions(ps common.Positions, dir byte) common.Positions {
+func (wh *Warehouse) movePositions(id int, dir byte) map[int]common.Positions {
+	ps := wh.boxes[id]
 	nps := make(common.Positions, len(ps))
 	for i := range ps {
 		nps[i] = wh.getNextPos(ps[i], dir)
@@ -88,26 +112,20 @@ func (wh *Warehouse) movePositions(ps common.Positions, dir byte) common.Positio
 		if wh.hasBox(np) {
 			npId := wh.boxCells[np]
 			if _, e := toMove[npId]; !e {
-				nbps := wh.movePositions(wh.boxes[npId], dir)
-				if nbps == nil {
+				npToMove := wh.movePositions(npId, dir)
+				if npToMove == nil {
 					return nil
 				}
-				toMove[npId] = nbps
+				for tid, tps := range npToMove {
+					toMove[tid] = tps
+				}
 			}
 		}
 	}
 
-	for id, idNps := range toMove {
-		for _, tp := range wh.boxes[id] {
-			delete(wh.boxCells, tp)
-		}
-		wh.boxes[id] = idNps
-		for _, tp := range wh.boxes[id] {
-			wh.boxCells[tp] = id
-		}
-	}
+	toMove[id] = nps
 
-	return nps
+	return toMove
 }
 
 // p is position we want to move, dir is dir to move it
@@ -148,17 +166,22 @@ func (wh *Warehouse) movePos(p common.Pos, dir byte) *common.Pos {
 
 				} else {
 
-					nps := wh.movePositions(wh.boxes[id], dir)
+					nps := wh.movePositions(id, dir)
 					if nps == nil {
 						return nil
 					}
 
-					for _, tp := range wh.boxes[id] {
-						delete(wh.boxCells, tp)
+					for tid, tps := range nps {
+						for _, tp := range wh.boxes[tid] {
+							delete(wh.boxCells, tp)
+						}
+						wh.boxes[tid] = tps
 					}
-					wh.boxes[id] = nps
-					for _, tp := range wh.boxes[id] {
-						wh.boxCells[tp] = id
+
+					for tid, _ := range nps {
+						for _, tp := range wh.boxes[tid] {
+							wh.boxCells[tp] = tid
+						}
 					}
 
 				}
@@ -292,26 +315,33 @@ func getData(f string, superSize bool) *Warehouse {
 	return &warehouse
 }
 
-func (wh *Warehouse) print() {
-	grid := make(common.Grid, len(wh.grid))
+func (wh *Warehouse) print(out io.ReadWriter) {
+	grid := make([][]string, len(wh.grid))
 	for y := range wh.grid {
-		grid[y] = make([]byte, len(wh.grid[y]))
-		copy(grid[y], wh.grid[y])
-	}
-	if !wh.ss {
-		for p := range wh.boxCells {
-			grid[p.Y][p.X] = boxChar
-		}
-	} else {
-		for _, ps := range wh.boxes {
-			grid[ps[0].Y][ps[0].X] = leftBoxChar
-			grid[ps[1].Y][ps[1].X] = rightBoxChar
+		grid[y] = make([]string, len(wh.grid[y]))
+		for x := 0; x < len(wh.grid[y]); x++ {
+			if wh.openCells[common.Pos{Y: y, X: x}] {
+				grid[y][x] = Red(".")
+			} else {
+				grid[y][x] = Green("#")
+			}
 		}
 	}
 
-	grid[wh.robot.p.Y][wh.robot.p.X] = wh.robot.nextMove()
+	if !wh.ss {
+		for p := range wh.boxCells {
+			grid[p.Y][p.X] = Yellow(string(boxChar))
+		}
+	} else {
+		for _, ps := range wh.boxes {
+			grid[ps[0].Y][ps[0].X] = Yellow(string(leftBoxChar))
+			grid[ps[1].Y][ps[1].X] = Yellow(string(rightBoxChar))
+		}
+	}
+
+	grid[wh.robot.p.Y][wh.robot.p.X] = White(string(robotChar)) // wh.robot.nextMove(
 	for _, line := range grid {
-		fmt.Println(string(line))
+		fmt.Fprintln(out, strings.Join(line, ""))
 	}
 }
 
@@ -327,7 +357,7 @@ func (wh *Warehouse) gpsSum() int {
 				fmt.Println("something wrong?")
 			}
 		}
-
+		//fmt.Println(ps[0], ps[0].Y*100+ps[0].X)
 		sum += ps[0].Y*100 + ps[0].X
 	}
 	return sum
@@ -337,33 +367,69 @@ var stepThrough = false
 
 // 1404329 too high
 func main() {
-	wh := getData("../test2.txt", true)
 
-	reader := bufio.NewReader(os.Stdin)
+	g, err := gocui.NewGui(gocui.OutputNormal)
+	if err != nil {
+		log.Panicln(err)
+	}
+	defer g.Close()
 
-	if stepThrough {
-		wh.print()
+	g.SetManagerFunc(layout)
+
+	if err := g.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, quit); err != nil {
+		log.Panicln(err)
 	}
 
+	if err := g.MainLoop(); err != nil && err != gocui.ErrQuit {
+		log.Panicln(err)
+	}
+
+}
+
+func loop(g *gocui.Gui) {
+	wh := getData("../data.txt", true)
+
 	for {
-		if stepThrough {
-			fmt.Println("next move will be: ", string(wh.robot.nextMove()))
-			_, _, _ = reader.ReadRune()
-		}
 
 		moved := wh.moveRobot()
 		if !moved {
+			g.Update(func(g *gocui.Gui) error {
+				v, _ := g.View("warehouse")
+				fmt.Fprintln(v, "GPS Sum calculated from ", len(wh.boxes), "boxes:", wh.gpsSum())
+				return nil
+			})
 			break
 		}
 
-		if stepThrough {
-			fmt.Println("-==-------=-=-=--------")
-			wh.print()
-		}
+		g.Update(func(g *gocui.Gui) error {
+			v, _ := g.View("warehouse")
+			v.Clear()
+			wh.print(v)
+			return nil
+		})
+
+		time.Sleep(time.Millisecond * 4)
 
 	}
 
-	wh.print()
-	fmt.Println(wh.gpsSum())
+}
 
+func layout(g *gocui.Gui) error {
+	maxX, maxY := g.Size()
+	if maxX > 0 && maxY > 0 {
+		if v, err := g.SetView("warehouse", 0, 0, 150, maxY-4); err != nil {
+			if err != gocui.ErrUnknownView {
+				return err
+			}
+			v.BgColor = gocui.ColorBlack
+			v.FgColor = gocui.ColorWhite
+			go loop(g)
+		}
+	}
+
+	return nil
+}
+
+func quit(g *gocui.Gui, v *gocui.View) error {
+	return gocui.ErrQuit
 }
