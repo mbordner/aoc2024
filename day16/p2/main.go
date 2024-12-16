@@ -24,12 +24,59 @@ type NodeId struct {
 	d Dir
 }
 
-func main() {
-	startId, goalId, g := getData("../test.txt")
+func (n NodeId) toPos() common.Pos {
+	return common.Pos{X: n.x, Y: n.y}
+}
 
-	shortestPaths := djikstra.GenerateShortestPaths(g, g.GetNode(startId))
-	path, cost := shortestPaths.GetShortestPath(g.GetNode(goalId))
-	fmt.Println(len(shortestPaths), len(path), int(cost))
+func main() {
+	startId, goalId, g := getData("../data.txt")
+
+	goalNode := g.GetNode(goalId)
+	startShortestPaths := djikstra.GenerateShortestPaths(g, g.GetNode(startId))
+	path, cost := startShortestPaths.GetShortestPath(goalNode)
+	fmt.Println("shortest path length:", len(path), "cost:", int(cost))
+
+	endShortestPaths := djikstra.GenerateShortestPaths(g, goalNode)
+
+	optimalTiles := make(map[common.Pos]bool)
+	optimalTiles[startId.toPos()] = true
+	optimalTiles[goalId.toPos()] = true
+	for _, n := range path {
+		optimalTiles[n.GetID().(NodeId).toPos()] = true
+	}
+
+	traversableNodes := g.GetTraversableNodes()
+	for _, n := range traversableNodes {
+		nId := n.GetID().(NodeId)
+		if _, e := optimalTiles[nId.toPos()]; !e {
+			sToNpath, sToNcost := startShortestPaths.GetShortestPath(n)
+			if len(sToNpath) > 0 && int(sToNcost) < int(cost) {
+				nToEpath, nToEcost := endShortestPaths.GetShortestPath(getOpNode(g, nId))
+				if len(nToEpath) > 0 {
+					if int(sToNcost)+int(nToEcost) == int(cost) {
+						optimalTiles[nId.toPos()] = true
+					}
+				}
+			}
+
+		}
+	}
+
+	fmt.Println("number of positions on all optimal paths:", len(optimalTiles))
+}
+
+func getOpNode(g *graph.Graph, id NodeId) *graph.Node {
+	opDir := Any
+	if id.d == N {
+		opDir = S
+	} else if id.d == S {
+		opDir = N
+	} else if id.d == W {
+		opDir = E
+	} else if id.d == E {
+		opDir = W
+	}
+	return g.GetNode(NodeId{x: id.x, y: id.y, d: opDir})
 }
 
 func getData(f string) (NodeId, NodeId, *graph.Graph) {
@@ -87,6 +134,11 @@ func getData(f string) (NodeId, NodeId, *graph.Graph) {
 		nextId := NodeId{x: nx, y: ny, d: id.d}
 		if nextId.x == goalId.x && nextId.y == goalId.y {
 			nextId.d = Any
+
+			opN := getOpNode(g, id)
+			goalNode := g.GetNode(goalId)
+			goalNode.AddEdge(opN, 1)
+
 		}
 		n.AddEdge(g.GetNode(nextId), 1)
 	}
