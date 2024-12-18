@@ -81,3 +81,33 @@ func ConvertGrid(lines []string) Grid {
 	}
 	return grid
 }
+
+type Queue[T comparable] []T
+
+func (q *Queue[T]) Enqueue(s T) {
+	*q = append(*q, s)
+}
+
+func (q *Queue[T]) Empty() bool {
+	return len(*q) == 0
+}
+
+func (q *Queue[T]) Dequeue() *T {
+	if !q.Empty() {
+		s := (*q)[0]
+		*q = (*q)[1:]
+		return &s
+	}
+	return nil
+}
+
+type PosContainer map[Pos]bool
+
+func (v PosContainer) Has(p Pos) bool {
+	if b, e := v[p]; e {
+		return b
+	}
+	return false
+}
+
+type PosLinker map[Pos]Pos
