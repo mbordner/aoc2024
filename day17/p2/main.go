@@ -28,7 +28,7 @@ const (
 	bst                    // (instruction combo op) mod 8
 	jnz                    // does nothing if RegA is 0, otherwise advances ptr to (instruction literal operator)
 	bxc                    // bitwise XOR of val in RegB and val in RegC
-	out                    // (instruction combo op) mod then outputs value
+	out                    // (instruction combo op) mod 8 then outputs value
 	bdv                    // like adv, but value stored in RegB
 	cdv                    // like adv, but value stored in RegC
 )
@@ -40,6 +40,11 @@ type Computer struct {
 	ptr     int
 	program []int
 	output  []int
+}
+
+func (c *Computer) Reset() {
+	c.a, c.b, c.c, c.ptr = 0, 0, 0, 0
+	c.output = make([]int, 0, 10)
 }
 
 func (c *Computer) Run() string {
@@ -65,7 +70,7 @@ func (c *Computer) xor(val1, val2 int) int {
 }
 
 func (c *Computer) pow2(val int) int {
-	return int(math.Pow(float64(2), float64(val)))
+	return 1 << val
 }
 
 func (c *Computer) combo(val int) int {
@@ -90,7 +95,10 @@ func (c *Computer) loop() {
 nextInstr:
 	for c.ptr < len(c.program) {
 		op := Instruction(c.program[c.ptr])
-		operand := c.program[c.ptr+1]
+		c.ptr++
+		operand := c.program[c.ptr]
+		c.ptr++
+		//fmt.Println(c.ptr, fmt.Sprintf("[%d, %d]", op, operand), fmt.Sprintf("{A:%d,B:%d,C:%d}", c.a, c.b, c.c), c.String())
 
 		regDiv := func(operand int) int {
 			num := c.a
@@ -114,19 +122,56 @@ nextInstr:
 			c.b = c.xor(c.b, c.c)
 		case out:
 			c.out(c.combo(operand) % 8)
+			match := 0
+			for i := 0; i < len(c.output) && i < len(c.program); i++ {
+				if c.output[i] == c.program[i] {
+					match++
+				}
+			}
+			if match != len(c.output) {
+				break
+			}
 		case bdv:
 			c.b = regDiv(operand)
 		case cdv:
 			c.c = regDiv(operand)
 		}
 
-		c.ptr += 2
 	}
+}
+
+func exp(base, e int) int {
+	return int(math.Pow(float64(base), float64(e)))
 }
 
 func main() {
 	computer := getComputer("../data.txt")
 
+	matched := 0
+	a := 0
+	for {
+		computer.Reset()
+		a++
+
+		aStart := a
+		aStart = a*exp(8, 9) + 0105714775
+		computer.a = aStart
+
+		computer.Run()
+		match := 0
+		for i := 0; i < len(computer.output) && i < len(computer.program); i++ {
+			if computer.output[i] == computer.program[i] {
+				match++
+			}
+		}
+		if match == len(computer.program) {
+			fmt.Println(aStart)
+			break
+		} else if match > matched {
+			matched = match
+			fmt.Println(aStart, fmt.Sprintf("%o", aStart), matched, computer.output)
+		}
+	}
 	output := computer.Run()
 	fmt.Println(output)
 }
