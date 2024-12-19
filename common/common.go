@@ -111,3 +111,25 @@ func (v PosContainer) Has(p Pos) bool {
 }
 
 type PosLinker map[Pos]Pos
+
+func Filter[T comparable](values []T, value T) []T {
+	vs := make([]T, 0, len(values))
+	for _, v := range values {
+		if v != value {
+			vs = append(vs, v)
+		}
+	}
+	return vs
+}
+
+func Dedupe[T comparable](values []T) []T {
+	vm := make(map[T]bool)
+	for _, v := range values {
+		vm[v] = true
+	}
+	vs := make([]T, 0, len(values))
+	for v := range vm {
+		vs = append(vs, v)
+	}
+	return vs
+}
