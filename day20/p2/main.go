@@ -6,7 +6,6 @@ import (
 	"github.com/mbordner/aoc2024/common/file"
 	"github.com/mbordner/aoc2024/common/graph"
 	"github.com/mbordner/aoc2024/common/graph/djikstra"
-	"log"
 	"sort"
 )
 
@@ -89,8 +88,52 @@ func (cs Cheats) Add(c Cheat, reduction int) {
 	cs[reduction][c] = true
 }
 
-func calculateCheats(sp common.Pos, path common.Positions, pc common.PosContainer) Cheats {
-	pathWithStart := append(common.Positions{sp}, path...)
+type CheatSteps map[common.Pos]int
+
+func (s *CheatSteps) Set(p common.Pos, c int) {
+	if ec, e := (*s)[p]; !e || c < ec {
+		(*s)[p] = c
+	}
+}
+
+func (s *CheatSteps) Has(p common.Pos) bool {
+	if _, e := (*s)[p]; e {
+		return true
+	}
+	return false
+}
+
+func getPossibleCheatDeltas(maxPs int) CheatSteps {
+
+	cheatDeltas := make(CheatSteps)
+
+	for i := 0; i <= maxPs; i++ {
+		for j := 0; j <= maxPs-i; j++ {
+			if !(i == 0 && j == 0) {
+				s := i + j
+
+				cheatDeltas.Set(common.Pos{X: i, Y: -j}, s)
+				cheatDeltas.Set(common.Pos{X: -i, Y: -j}, s)
+
+				cheatDeltas.Set(common.Pos{X: i, Y: j}, s)
+				cheatDeltas.Set(common.Pos{X: i, Y: -j}, s)
+
+				cheatDeltas.Set(common.Pos{X: -i, Y: j}, s)
+				cheatDeltas.Set(common.Pos{X: -i, Y: -j}, s)
+
+				cheatDeltas.Set(common.Pos{X: -i, Y: j}, s)
+				cheatDeltas.Set(common.Pos{X: i, Y: j}, s)
+
+			}
+		}
+	}
+
+	return cheatDeltas
+
+}
+
+func calculateCheats(start common.Pos, path common.Positions, pc common.PosContainer) Cheats {
+	pathWithStart := append(common.Positions{start}, path...)
 
 	cheats := make(Cheats)
 
@@ -99,47 +142,36 @@ func calculateCheats(sp common.Pos, path common.Positions, pc common.PosContaine
 		step[p] = i
 	}
 
+	cheatDeltas := getPossibleCheatDeltas(20)
+
 	/*
-		  2
-		 212
-		21P12
-		 212
-		  2
-
-		8 2's
-		4 1's
-	*/
-
-	for _, p := range pathWithStart {
-		possibleCheats := make(map[Cheat]bool)
-		for y1 := p.Y - 1; y1 <= p.Y+1; y1++ {
-			for x1 := p.X - 1; x1 <= p.X+1; x1++ {
-				if (x1 == p.X && y1 != p.Y) || (y1 == p.Y && x1 != p.X) {
-					for y2 := y1 - 1; y2 <= y1+1; y2++ {
-						for x2 := x1 - 1; x2 <= x1+1; x2++ {
-							if ((y2 == y1 && x2 != x1) || (x2 == x1 && y2 != y1)) && !(y2 == p.Y && x2 == p.X) {
-								p1 := common.Pos{Y: y1, X: x1}
-								p2 := common.Pos{Y: y2, X: x2}
-								if !pc.Has(p1) && pc.Has(p2) {
-									if step[p2] > step[p] {
-										possibleCheats[Cheat{P1: p1, P2: p2}] = true
-									}
-								}
-							}
-						}
-					}
-				}
+		tg := make(common.Grid, 100)
+		for y := 0; y < len(tg); y++ {
+			tg[y] = make([]byte, 100)
+			for x := 0; x < len(tg[y]); x++ {
+				tg[y][x] = ' '
 			}
 		}
 
-		if len(possibleCheats) > 8 {
-			log.Panic("should not happen")
+		chars := []byte{'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o'}
+		s := common.Pos{Y: 49, X: 49}
+		for d, c := range cheatDeltas {
+			p := common.Pos{X: d.X + s.X, Y: d.Y + s.Y}
+			tg[p.Y][p.X] = chars[c]
 		}
+		tg[s.Y][s.X] = '0'
 
-		for pc := range possibleCheats {
-			reduction := step[pc.P2] - step[p] - 2
-			if reduction > 0 {
-				cheats.Add(pc, reduction)
+		tg.Print()
+	*/
+
+	for _, p := range pathWithStart {
+		for d, c := range cheatDeltas {
+			p2 := common.Pos{Y: p.Y + d.Y, X: p.X + d.X}
+			if pc.Has(p2) && step[p2] > step[p] {
+				reduction := step[p2] - step[p] - c
+				if reduction > 0 {
+					cheats.Add(Cheat{P1: p, P2: p2}, reduction)
+				}
 			}
 		}
 	}
