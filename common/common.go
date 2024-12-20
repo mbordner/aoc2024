@@ -63,6 +63,26 @@ func (p Pos) String() string {
 
 type Positions []Pos
 
+func (p Positions) Extents() (Pos, Pos) {
+	var min, max Pos = p[0], p[0]
+	for i := 1; i < len(p); i++ {
+		o := p[i]
+		if o.Y < min.Y {
+			min = o
+		}
+		if o.X < min.X {
+			min = o
+		}
+		if o.Y > max.Y {
+			max = o
+		}
+		if o.X > max.X {
+			max = o
+		}
+	}
+	return min, max
+}
+
 func (g Grid) Contains(x, y int) bool {
 	if y >= 0 && y < len(g) && x >= 0 && x < len(g[y]) {
 		return true
@@ -72,6 +92,12 @@ func (g Grid) Contains(x, y int) bool {
 
 func (g Grid) ContainsPos(p Pos) bool {
 	return g.Contains(p.X, p.Y)
+}
+
+func (g Grid) Print() {
+	for _, row := range g {
+		fmt.Println(string(row))
+	}
 }
 
 func ConvertGrid(lines []string) Grid {

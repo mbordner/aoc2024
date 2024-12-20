@@ -188,6 +188,16 @@ func (g *Graph) GetTraversableNodes() []*Node {
 	return ns
 }
 
+func (g *Graph) GetNonTraversableNodes() []*Node {
+	ns := make([]*Node, 0, len(g.nodes))
+	for _, n := range g.nodes {
+		if !n.IsTraversable() {
+			ns = append(ns, n)
+		}
+	}
+	return ns
+}
+
 func (g *Graph) Merge(og *Graph) {
 	for id, n := range og.nodes {
 		g.nodes[id] = n

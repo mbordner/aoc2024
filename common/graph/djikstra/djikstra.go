@@ -46,7 +46,7 @@ func (sps ShortestPaths) GetShortestPath(n *graph.Node) ([]*graph.Node, float64)
 	return nodes, value
 }
 
-// this will hold all of the unvisited node values sorted with minimum values at the top
+// this will hold all the unvisited node values sorted with minimum values at the top
 type nodeValues []*NodeValue
 
 func (h nodeValues) Len() int {
