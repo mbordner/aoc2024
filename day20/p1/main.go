@@ -5,12 +5,58 @@ import (
 	"github.com/mbordner/aoc2024/common"
 	"github.com/mbordner/aoc2024/common/file"
 	"github.com/mbordner/aoc2024/common/graph"
+	"github.com/mbordner/aoc2024/common/graph/djikstra"
 )
+
+type Cheat struct {
+	p1        common.Pos
+	p2        common.Pos
+	reduction int
+}
 
 func main() {
 	s, e, g := getData("../test.txt")
+
+	grid := getGrid(g)
+
+	shortestPaths := djikstra.GenerateShortestPaths(g, s)
+	path, c := shortestPaths.GetShortestPath(e)
+
+	// does not contain start
+	pathPosContainer := make(common.PosContainer)
+	pathPositions := make(common.Positions, len(path))
+	startPosition := s.GetID().(common.Pos)
+
+	prev := startPosition
+	for i, n := range path[0 : len(path)-1] {
+		p := n.GetID().(common.Pos)
+		pathPositions[i] = p
+		pathPosContainer[p] = true
+		r := rune('*')
+		if p.Y == prev.Y {
+			if p.X > prev.X {
+				r = rune('>')
+			} else {
+				r = rune('<')
+			}
+		} else if p.X == prev.X {
+			if p.Y > prev.Y {
+				r = rune('v')
+			} else {
+				r = rune('^')
+			}
+		}
+		grid[p.Y][p.X] = byte(r)
+		prev = p
+	}
+
+	grid.Print()
+
+	cost := int(c)
+
 	fmt.Println(s, e, g.Len())
-	getGrid(g).Print()
+	fmt.Println("shortest path cost:", cost)
+
 }
 
 func getGrid(g *graph.Graph) common.Grid {
