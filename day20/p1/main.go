@@ -10,7 +10,6 @@ import (
 	"sort"
 )
 
-// 5520 too high
 func main() {
 	s, e, g := getData("../data.txt")
 
@@ -66,7 +65,7 @@ func main() {
 
 	count := 0
 	for _, s := range saves {
-		if s <= 100 {
+		if s >= 100 {
 			count += len(cheats[s])
 		}
 		fmt.Printf("There are %d cheats that save %d picoseconds\n", len(cheats[s]), s)
