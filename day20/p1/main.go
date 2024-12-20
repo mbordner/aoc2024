@@ -6,6 +6,7 @@ import (
 	"github.com/mbordner/aoc2024/common/file"
 	"github.com/mbordner/aoc2024/common/graph"
 	"github.com/mbordner/aoc2024/common/graph/djikstra"
+	"log"
 	"sort"
 )
 
@@ -80,14 +81,13 @@ type Cheat struct {
 	P2 common.Pos
 }
 
-type Cheats map[int][]Cheat
+type Cheats map[int]map[Cheat]bool
 
 func (cs Cheats) Add(c Cheat, reduction int) {
-	if _, e := cs[reduction]; e {
-		cs[reduction] = append(cs[reduction], c)
-	} else {
-		cs[reduction] = []Cheat{c}
+	if _, e := cs[reduction]; !e {
+		cs[reduction] = make(map[Cheat]bool)
 	}
+	cs[reduction][c] = true
 }
 
 func calculateCheats(sp common.Pos, path common.Positions, pc common.PosContainer) Cheats {
@@ -100,19 +100,30 @@ func calculateCheats(sp common.Pos, path common.Positions, pc common.PosContaine
 		step[p] = i
 	}
 
+	/*
+		  2
+		 212
+		21P12
+		 212
+		  2
+
+		8 2's
+		4 1's
+	*/
+
 	for _, p := range pathWithStart {
-		possibleCheats := make([]Cheat, 0, 16)
+		possibleCheats := make(map[Cheat]bool)
 		for y1 := p.Y - 1; y1 <= p.Y+1; y1++ {
 			for x1 := p.X - 1; x1 <= p.X+1; x1++ {
 				if (x1 == p.X && y1 != p.Y) || (y1 == p.Y && x1 != p.X) {
 					for y2 := y1 - 1; y2 <= y1+1; y2++ {
 						for x2 := x1 - 1; x2 <= x1+1; x2++ {
-							if (y2 == y1 && x2 != x1) || (x2 == x1 && y2 != y1) {
+							if ((y2 == y1 && x2 != x1) || (x2 == x1 && y2 != y1)) && !(y2 == p.Y && x2 == p.X) {
 								p1 := common.Pos{Y: y1, X: x1}
 								p2 := common.Pos{Y: y2, X: x2}
 								if !pc.Has(p1) && pc.Has(p2) {
 									if step[p2] > step[p] {
-										possibleCheats = append(possibleCheats, Cheat{P1: p1, P2: p2})
+										possibleCheats[Cheat{P1: p1, P2: p2}] = true
 									}
 								}
 							}
@@ -122,7 +133,11 @@ func calculateCheats(sp common.Pos, path common.Positions, pc common.PosContaine
 			}
 		}
 
-		for _, pc := range possibleCheats {
+		if len(possibleCheats) > 8 {
+			log.Panic("should not happen")
+		}
+
+		for pc := range possibleCheats {
 			reduction := step[pc.P2] - step[p] - 2
 			if reduction > 0 {
 				cheats.Add(pc, reduction)
