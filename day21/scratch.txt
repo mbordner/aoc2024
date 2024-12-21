@@ -1,0 +1,51 @@
+In summary, there are the following keypads:
+
+One directional keypad that you are using.
+Two directional keypads that robots are using.
+One numeric keypad (on a door) that a robot is using.
+
+[Num pad] Robot A <-  [Dir1] Robot B <- [Dir2] Robot C <- [Dir3] Me
+
++---+---+---+
+| 7 | 8 | 9 |
++---+---+---+
+| 4 | 5 | 6 |
++---+---+---+
+| 1 | 2 | 3 |
++---+---+---+
+    | 0 | A |
+    +---+---+
+
+    +---+---+
+    | ^ | A |
++---+---+---+
+| < | v | > |
++---+---+---+
+
+num:  <A^A>^^AvvvA    //// <A^A>^^AvvvA, <A^A^>^AvvvA, and <A^A^^>AvvvA.
+dir1: v<<A>>^A<A>AvA<^AA>A<vAAA>^A    //////v<<A >>^A <A >A vA <^AA >A <vAAA >^A
+    v<<A (move to < and press)  (move to 0)
+    >>^A (move to A and press)  (press 0)
+    <A (move to ^ and Press) (move to 2)
+    >A (move to A and press) (press 2)
+    vA (move to > and press) (move to 3)
+    <^AA (move to ^ and press 2 twice) (move to 6, move to 9)
+    >A (move to A and press) (press 9)
+    <vAAA (move to down and press 3times) (move to 6... 3... A)
+    >^A (move to A and press) (press A)
+dir2: <vA<AA>>^AvAA<^A>A<v<A>>^AvA^A<vA>^A<v<A>^A>AAvA^A<v<A>A>^AAAvA<^A>A
+
+dir3:
+
+<vA<AA>>^AvAA<^A>A<v<A>>^AvA^A<vA>^A<v<A>^A>AAvA^A<v<A>A>^AAAvA<^A>A
+v<<A>>^A<A>AvA<^AA>A<vAAA>^A
+<A^A>^^AvvvA
+029A
+
+
+
+029A: <vA<AA>>^AvAA<^A>A<v<A>>^AvA^A<vA>^A<v<A>^A>AAvA^A<v<A>A>^AAAvA<^A>A
+980A: <v<A>>^AAAvA^A<vA<AA>>^AvAA<^A>A<v<A>A>^AAAvA<^A>A<vA>^A<A>A
+179A: <v<A>>^A<vA<A>>^AAvAA<^A>A<v<A>>^AAvA^A<vA>^AA<A>A<v<A>A>^AAAvA<^A>A
+456A: <v<A>>^AA<vA<A>>^AAvAA<^A>A<vA>^A<A>A<vA>^A<A>A<v<A>A>^AAvA<^A>A
+379A: <v<A>>^AvA^A<vA<AA>>^AAvA<^A>AAvA^A<vA>^AA<A>A<v<A>A>^AAAvA<^A>A

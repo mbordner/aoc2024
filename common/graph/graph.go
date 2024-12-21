@@ -2,8 +2,18 @@ package graph
 
 import "fmt"
 
+type NodeValue struct {
+	Node              *Node
+	Value             float64
+	PreviousNode      *Node
+	PreviousNodeValue *NodeValue
+	EdgeTaken         *Edge
+}
+
 type TraversableNodeFunction func(n *Node) bool
 type TraversableEdgeFunction func(e *Edge) bool
+
+type EdgeNodeValueFunction func(e *Edge, nv NodeValue) float64
 
 type VisitedNodes []*Node
 
@@ -25,6 +35,7 @@ type Edge struct {
 	properties      map[string]interface{}
 	traversable     bool
 	traversableFunc *TraversableEdgeFunction
+	nodeValueFunc   *EdgeNodeValueFunction
 }
 
 func (e *Edge) IsTraversable() bool {
@@ -36,8 +47,9 @@ func (e *Edge) IsTraversable() bool {
 	return traversable && e.destination != nil && e.destination.IsTraversable()
 }
 
-func (e *Edge) SetTraversable(b bool) {
+func (e *Edge) SetTraversable(b bool) *Edge {
 	e.traversable = b
+	return e
 }
 
 func (e *Edge) GetSource() *Node {
@@ -48,16 +60,31 @@ func (e *Edge) GetDestination() *Node {
 	return e.destination
 }
 
-func (e *Edge) SetDestination(o *Node) {
+func (e *Edge) SetDestination(o *Node) *Edge {
 	e.destination = o
+	return e
 }
 
 func (e *Edge) GetValue() float64 {
 	return e.value
 }
 
-func (e *Edge) AddProperty(id string, value interface{}) {
+func (e *Edge) GetNodeValue(nv NodeValue) float64 {
+	if e.nodeValueFunc != nil {
+		f := *(e.nodeValueFunc)
+		return f(e, nv)
+	}
+	return e.GetValue()
+}
+
+func (e *Edge) SetNodeValueFunction(nvf *EdgeNodeValueFunction) *Edge {
+	e.nodeValueFunc = nvf
+	return e
+}
+
+func (e *Edge) AddProperty(id string, value interface{}) *Edge {
 	e.properties[id] = value
+	return e
 }
 
 func (e *Edge) GetProperty(id string) interface{} {
@@ -109,16 +136,19 @@ func (n *Node) IsTraversable() bool {
 	return n.traversable
 }
 
-func (n *Node) SetTraversable(b bool) {
+func (n *Node) SetTraversable(b bool) *Node {
 	n.traversable = b
+	return n
 }
 
-func (n *Node) SetTraversableFunction(f TraversableNodeFunction) {
+func (n *Node) SetTraversableFunction(f TraversableNodeFunction) *Node {
 	n.traversableFunc = &f
+	return n
 }
 
-func (n *Node) AddProperty(id string, value interface{}) {
+func (n *Node) AddProperty(id string, value interface{}) *Node {
 	n.properties[id] = value
+	return n
 }
 
 func (n *Node) GetProperty(id string) interface{} {

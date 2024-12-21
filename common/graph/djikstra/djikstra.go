@@ -7,19 +7,16 @@ import (
 )
 
 type NodeValue struct {
-	Node         *graph.Node
-	Value        float64
-	PreviousNode *graph.Node
-	visited      bool
+	graph.NodeValue
+	visited bool
 }
 
 // ShortestPaths will hold all the nodes, visited and unvisited
 type ShortestPaths map[interface{}]*NodeValue
 
-func (sps ShortestPaths) GetShortestPath(n *graph.Node) ([]*graph.Node, float64) {
-
+func (sps ShortestPaths) GetShortestPathWithEdges(n *graph.Node) ([]*graph.Node, []*graph.Edge, float64) {
 	if _, ok := sps[n.GetID()]; !ok {
-		return nil, float64(0)
+		return nil, nil, float64(0)
 	}
 
 	current := sps[n.GetID()].Node
@@ -29,20 +26,28 @@ func (sps ShortestPaths) GetShortestPath(n *graph.Node) ([]*graph.Node, float64)
 	}
 
 	nodes := make([]*graph.Node, 0, 50)
+	edges := make([]*graph.Edge, 0, 50)
 
 	for sps[current.GetID()].PreviousNode != nil {
 		if current.IsTraversable() == false {
-			return []*graph.Node{}, float64(0)
+			return []*graph.Node{}, []*graph.Edge{}, float64(0)
 		}
 		nodes = append(nodes, current)
+		edges = append(edges, sps[current.GetID()].EdgeTaken)
 		current = sps[current.GetID()].PreviousNode
 	}
 
 	// reverse the array
 	for i, j, h := 0, len(nodes)-1, len(nodes)/2; i < h; i, j = i+1, j-1 {
 		nodes[i], nodes[j] = nodes[j], nodes[i]
+		edges[i], edges[j] = edges[j], edges[i]
 	}
 
+	return nodes, edges, value
+}
+
+func (sps ShortestPaths) GetShortestPath(n *graph.Node) ([]*graph.Node, float64) {
+	nodes, _, value := sps.GetShortestPathWithEdges(n)
 	return nodes, value
 }
 
@@ -119,7 +124,7 @@ func GenerateShortestPaths(g *graph.Graph, source *graph.Node) ShortestPaths {
 	nvh := newNodeValueHeap(g.Len())
 
 	for _, node := range g.GetTraversableNodes() {
-		nv := &NodeValue{Node: node, Value: math.MaxFloat64, PreviousNode: nil}
+		nv := &NodeValue{NodeValue: graph.NodeValue{Node: node, Value: math.MaxFloat64, PreviousNode: nil, PreviousNodeValue: nil, EdgeTaken: nil}, visited: false}
 		if node == source {
 			// this is our source node, and we need to treat it differently
 			nv.Value = float64(0)
@@ -144,7 +149,7 @@ func GenerateShortestPaths(g *graph.Graph, source *graph.Node) ShortestPaths {
 					env := sps[e.GetDestination().GetID()]
 
 					// this value is the cost up to current node + cost to destination from current
-					value := current.Value + e.GetValue()
+					value := current.Value + e.GetNodeValue(current.NodeValue)
 
 					// check if this new value is less than anything we found before
 					if value < env.Value {
@@ -152,6 +157,8 @@ func GenerateShortestPaths(g *graph.Graph, source *graph.Node) ShortestPaths {
 
 						env.Value = value
 						env.PreviousNode = current.Node
+						env.PreviousNodeValue = &current.NodeValue
+						env.EdgeTaken = e
 						// need to reorder the heap after this change
 						nvh.fix(env)
 					}
