@@ -134,27 +134,6 @@ func getSequenceForSequence(g *graph.Graph, spCache ShortestPathCache, seq strin
 	return sb.String()
 }
 
-func getEdgeNodeValueFunction() *graph.EdgeNodeValueFunction {
-	f := graph.EdgeNodeValueFunction(func(e *graph.Edge, nv graph.NodeValue) float64 {
-		dirChangeCost := float64(0)
-		if nv.EdgeTaken != nil {
-			curNodeValue := &nv
-			curEdgeDir := e.GetProperty("dir").(string)
-			for curNodeValue != nil && curNodeValue.EdgeTaken !=
-				nil {
-				prevEdgeDir := curNodeValue.EdgeTaken.GetProperty("dir").(string)
-				if curEdgeDir != prevEdgeDir {
-					dirChangeCost += 0.02024
-				}
-				curEdgeDir = prevEdgeDir
-				curNodeValue = curNodeValue.PreviousNodeValue
-			}
-		}
-		return e.GetValue() + dirChangeCost
-	})
-	return &f
-}
-
 func getNumPadGraph() *graph.Graph {
 	g := graph.NewGraph()
 
@@ -170,46 +149,46 @@ func getNumPadGraph() *graph.Graph {
 	b8 := g.CreateNode("8")
 	b9 := g.CreateNode("9")
 
-	bA.AddEdge(b3, 1).AddProperty("dir", U).SetNodeValueFunction(getEdgeNodeValueFunction())
-	bA.AddEdge(b0, 1).AddProperty("dir", L).SetNodeValueFunction(getEdgeNodeValueFunction())
+	bA.AddEdge(b3, 1).AddProperty("dir", U)
+	bA.AddEdge(b0, 1).AddProperty("dir", L)
 
-	b0.AddEdge(bA, 1).AddProperty("dir", R).SetNodeValueFunction(getEdgeNodeValueFunction())
-	b0.AddEdge(b2, 1).AddProperty("dir", U).SetNodeValueFunction(getEdgeNodeValueFunction())
+	b0.AddEdge(bA, 1).AddProperty("dir", R)
+	b0.AddEdge(b2, 1).AddProperty("dir", U)
 
-	b1.AddEdge(b2, 1).AddProperty("dir", R).SetNodeValueFunction(getEdgeNodeValueFunction())
-	b1.AddEdge(b4, 1).AddProperty("dir", U).SetNodeValueFunction(getEdgeNodeValueFunction())
+	b1.AddEdge(b2, 1).AddProperty("dir", R)
+	b1.AddEdge(b4, 1).AddProperty("dir", U)
 
-	b2.AddEdge(b3, 1).AddProperty("dir", R).SetNodeValueFunction(getEdgeNodeValueFunction())
-	b2.AddEdge(b0, 1).AddProperty("dir", D).SetNodeValueFunction(getEdgeNodeValueFunction())
-	b2.AddEdge(b5, 1).AddProperty("dir", U).SetNodeValueFunction(getEdgeNodeValueFunction())
-	b2.AddEdge(b1, 1).AddProperty("dir", L).SetNodeValueFunction(getEdgeNodeValueFunction())
+	b2.AddEdge(b3, 1).AddProperty("dir", R)
+	b2.AddEdge(b0, 1).AddProperty("dir", D)
+	b2.AddEdge(b5, 1).AddProperty("dir", U)
+	b2.AddEdge(b1, 1).AddProperty("dir", L)
 
-	b3.AddEdge(bA, 1).AddProperty("dir", D).SetNodeValueFunction(getEdgeNodeValueFunction())
-	b3.AddEdge(b6, 1).AddProperty("dir", U).SetNodeValueFunction(getEdgeNodeValueFunction())
-	b3.AddEdge(b2, 1).AddProperty("dir", L).SetNodeValueFunction(getEdgeNodeValueFunction())
+	b3.AddEdge(bA, 1).AddProperty("dir", D)
+	b3.AddEdge(b6, 1).AddProperty("dir", U)
+	b3.AddEdge(b2, 1).AddProperty("dir", L)
 
-	b4.AddEdge(b5, 1).AddProperty("dir", R).SetNodeValueFunction(getEdgeNodeValueFunction())
-	b4.AddEdge(b1, 1).AddProperty("dir", D).SetNodeValueFunction(getEdgeNodeValueFunction())
-	b4.AddEdge(b7, 1).AddProperty("dir", U).SetNodeValueFunction(getEdgeNodeValueFunction())
+	b4.AddEdge(b5, 1).AddProperty("dir", R)
+	b4.AddEdge(b1, 1).AddProperty("dir", D)
+	b4.AddEdge(b7, 1).AddProperty("dir", U)
 
-	b5.AddEdge(b6, 1).AddProperty("dir", R).SetNodeValueFunction(getEdgeNodeValueFunction())
-	b5.AddEdge(b2, 1).AddProperty("dir", D).SetNodeValueFunction(getEdgeNodeValueFunction())
-	b5.AddEdge(b8, 1).AddProperty("dir", U).SetNodeValueFunction(getEdgeNodeValueFunction())
-	b5.AddEdge(b4, 1).AddProperty("dir", L).SetNodeValueFunction(getEdgeNodeValueFunction())
+	b5.AddEdge(b6, 1).AddProperty("dir", R)
+	b5.AddEdge(b2, 1).AddProperty("dir", D)
+	b5.AddEdge(b8, 1).AddProperty("dir", U)
+	b5.AddEdge(b4, 1).AddProperty("dir", L)
 
-	b6.AddEdge(b9, 1).AddProperty("dir", U).SetNodeValueFunction(getEdgeNodeValueFunction())
-	b6.AddEdge(b5, 1).AddProperty("dir", L).SetNodeValueFunction(getEdgeNodeValueFunction())
-	b6.AddEdge(b3, 1).AddProperty("dir", D).SetNodeValueFunction(getEdgeNodeValueFunction())
+	b6.AddEdge(b9, 1).AddProperty("dir", U)
+	b6.AddEdge(b5, 1).AddProperty("dir", L)
+	b6.AddEdge(b3, 1).AddProperty("dir", D)
 
-	b7.AddEdge(b8, 1).AddProperty("dir", R).SetNodeValueFunction(getEdgeNodeValueFunction())
-	b7.AddEdge(b4, 1).AddProperty("dir", D).SetNodeValueFunction(getEdgeNodeValueFunction())
+	b7.AddEdge(b8, 1).AddProperty("dir", R)
+	b7.AddEdge(b4, 1).AddProperty("dir", D)
 
-	b8.AddEdge(b9, 1).AddProperty("dir", R).SetNodeValueFunction(getEdgeNodeValueFunction())
-	b8.AddEdge(b5, 1).AddProperty("dir", D).SetNodeValueFunction(getEdgeNodeValueFunction())
-	b8.AddEdge(b7, 1).AddProperty("dir", L).SetNodeValueFunction(getEdgeNodeValueFunction())
+	b8.AddEdge(b9, 1).AddProperty("dir", R)
+	b8.AddEdge(b5, 1).AddProperty("dir", D)
+	b8.AddEdge(b7, 1).AddProperty("dir", L)
 
-	b9.AddEdge(b6, 1).AddProperty("dir", D).SetNodeValueFunction(getEdgeNodeValueFunction())
-	b9.AddEdge(b8, 1).AddProperty("dir", L).SetNodeValueFunction(getEdgeNodeValueFunction())
+	b9.AddEdge(b6, 1).AddProperty("dir", D)
+	b9.AddEdge(b8, 1).AddProperty("dir", L)
 
 	return g
 }
@@ -223,20 +202,20 @@ func getDirPadGraph() *graph.Graph {
 	bD := g.CreateNode(D)
 	bL := g.CreateNode(L)
 
-	bA.AddEdge(bR, 1).AddProperty("dir", D).SetNodeValueFunction(getEdgeNodeValueFunction())
-	bA.AddEdge(bU, 1).AddProperty("dir", L).SetNodeValueFunction(getEdgeNodeValueFunction())
+	bA.AddEdge(bR, 1).AddProperty("dir", D)
+	bA.AddEdge(bU, 1).AddProperty("dir", L)
 
-	bR.AddEdge(bA, 1).AddProperty("dir", U).SetNodeValueFunction(getEdgeNodeValueFunction())
-	bR.AddEdge(bD, 1).AddProperty("dir", L).SetNodeValueFunction(getEdgeNodeValueFunction())
+	bR.AddEdge(bA, 1).AddProperty("dir", U)
+	bR.AddEdge(bD, 1).AddProperty("dir", L)
 
-	bU.AddEdge(bA, 1).AddProperty("dir", R).SetNodeValueFunction(getEdgeNodeValueFunction())
-	bU.AddEdge(bD, 1).AddProperty("dir", D).SetNodeValueFunction(getEdgeNodeValueFunction())
+	bU.AddEdge(bA, 1).AddProperty("dir", R)
+	bU.AddEdge(bD, 1).AddProperty("dir", D)
 
-	bD.AddEdge(bU, 1).AddProperty("dir", U).SetNodeValueFunction(getEdgeNodeValueFunction())
-	bD.AddEdge(bR, 1).AddProperty("dir", R).SetNodeValueFunction(getEdgeNodeValueFunction())
-	bD.AddEdge(bL, 1).AddProperty("dir", L).SetNodeValueFunction(getEdgeNodeValueFunction())
+	bD.AddEdge(bU, 1).AddProperty("dir", U)
+	bD.AddEdge(bR, 1).AddProperty("dir", R)
+	bD.AddEdge(bL, 1).AddProperty("dir", L)
 
-	bL.AddEdge(bD, 1).AddProperty("dir", R).SetNodeValueFunction(getEdgeNodeValueFunction())
+	bL.AddEdge(bD, 1).AddProperty("dir", R)
 
 	return g
 }
