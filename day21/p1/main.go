@@ -34,6 +34,9 @@ func (spc ShortestPathCache) GetSP(g *graph.Graph, nodeId string) djikstra.Short
 
 // 177830 too high
 // 183830 too high
+
+// 182112 too high
+// 182810 not right
 func main() {
 	numPadGraph := getNumPadGraph()
 	numPadSPC := make(ShortestPathCache)
@@ -90,12 +93,37 @@ func getSequenceForSequence(g *graph.Graph, spCache ShortestPathCache, seq strin
 
 		nextId := string(seq[i])
 
-		sp := spCache.GetSP(g, curId)
+		toSP := spCache.GetSP(g, curId)
+		backSp := spCache.GetSP(g, nextId)
 
-		_, pathEdges, _ := sp.GetShortestPathWithEdges(g.GetNode(nextId))
+		toSB := strings.Builder{}
+		backSB := strings.Builder{}
 
-		for _, e := range pathEdges {
-			sb.WriteString(e.GetProperty("dir").(string))
+		_, toPathEdges, toCost := toSP.GetShortestPathWithEdges(g.GetNode(nextId))
+		_, backPathEdges, backCost := backSp.GetShortestPathWithEdges(g.GetNode(curId))
+
+		for _, e := range toPathEdges {
+			toSB.WriteString(e.GetProperty("dir").(string))
+		}
+
+		for j := len(backPathEdges) - 1; j >= 0; j-- {
+			e := backPathEdges[j]
+			switch e.GetProperty("dir").(string) {
+			case U:
+				backSB.WriteString(D)
+			case D:
+				backSB.WriteString(U)
+			case R:
+				backSB.WriteString(L)
+			case L:
+				backSB.WriteString(R)
+			}
+		}
+
+		if backCost < toCost && backSB.String() != toSB.String() {
+			sb.WriteString(backSB.String())
+		} else {
+			sb.WriteString(toSB.String())
 		}
 
 		sb.WriteString("A")
@@ -112,10 +140,11 @@ func getEdgeNodeValueFunction() *graph.EdgeNodeValueFunction {
 		if nv.EdgeTaken != nil {
 			curNodeValue := &nv
 			curEdgeDir := e.GetProperty("dir").(string)
-			for curNodeValue != nil {
-				prevEdgeDir := nv.EdgeTaken.GetProperty("dir").(string)
+			for curNodeValue != nil && curNodeValue.EdgeTaken !=
+				nil {
+				prevEdgeDir := curNodeValue.EdgeTaken.GetProperty("dir").(string)
 				if curEdgeDir != prevEdgeDir {
-					dirChangeCost += 0.2024
+					dirChangeCost += 0.02024
 				}
 				curEdgeDir = prevEdgeDir
 				curNodeValue = curNodeValue.PreviousNodeValue
@@ -194,18 +223,18 @@ func getDirPadGraph() *graph.Graph {
 	bD := g.CreateNode(D)
 	bL := g.CreateNode(L)
 
-	bA.AddEdge(bR, 1).AddProperty("dir", D).SetNodeValueFunction(getEdgeNodeValueFunction())
 	bA.AddEdge(bU, 1).AddProperty("dir", L).SetNodeValueFunction(getEdgeNodeValueFunction())
+	bA.AddEdge(bR, 1).AddProperty("dir", D).SetNodeValueFunction(getEdgeNodeValueFunction())
 
-	bR.AddEdge(bA, 1).AddProperty("dir", U).SetNodeValueFunction(getEdgeNodeValueFunction())
 	bR.AddEdge(bD, 1).AddProperty("dir", L).SetNodeValueFunction(getEdgeNodeValueFunction())
+	bR.AddEdge(bA, 1).AddProperty("dir", U).SetNodeValueFunction(getEdgeNodeValueFunction())
 
 	bU.AddEdge(bA, 1).AddProperty("dir", R).SetNodeValueFunction(getEdgeNodeValueFunction())
 	bU.AddEdge(bD, 1).AddProperty("dir", D).SetNodeValueFunction(getEdgeNodeValueFunction())
 
 	bD.AddEdge(bR, 1).AddProperty("dir", R).SetNodeValueFunction(getEdgeNodeValueFunction())
-	bD.AddEdge(bU, 1).AddProperty("dir", U).SetNodeValueFunction(getEdgeNodeValueFunction())
 	bD.AddEdge(bL, 1).AddProperty("dir", L).SetNodeValueFunction(getEdgeNodeValueFunction())
+	bD.AddEdge(bU, 1).AddProperty("dir", U).SetNodeValueFunction(getEdgeNodeValueFunction())
 
 	bL.AddEdge(bD, 1).AddProperty("dir", R).SetNodeValueFunction(getEdgeNodeValueFunction())
 
