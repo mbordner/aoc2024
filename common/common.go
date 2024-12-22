@@ -26,6 +26,22 @@ func GetPairSets[T Anything](elements []T) [][]T {
 	return values
 }
 
+func CartesianProduct[T any](sets [][]T) [][]T {
+	result := [][]T{{}}
+
+	for _, set := range sets {
+		temp := [][]T{}
+		for _, x := range set {
+			for _, r := range result {
+				temp = append(temp, append(r, x))
+			}
+		}
+		result = temp
+	}
+
+	return result
+}
+
 type IntNumber interface {
 	int | int32 | int64
 }

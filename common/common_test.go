@@ -46,6 +46,27 @@ func TestPopulateStringCombinationsAtLength(t *testing.T) {
 
 }
 
+func TestCartesianProduct(t *testing.T) {
+	tests := []struct {
+		input  [][]string
+		output [][]string
+	}{
+		{
+			input:  [][]string{{"a", "b"}, {"c", "d"}},
+			output: [][]string{{"a", "c"}, {"a", "d"}, {"b", "c"}, {"b", "d"}},
+		},
+	}
+
+	for i, tc := range tests {
+		t.Run(fmt.Sprintf("test %d", i), func(t *testing.T) {
+
+			result := CartesianProduct(tc.input)
+			assert.Equal(t, len(tc.output), (result))
+
+		})
+	}
+}
+
 func TestGetPairs(t *testing.T) {
 
 	tests := []struct {

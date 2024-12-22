@@ -223,18 +223,18 @@ func getDirPadGraph() *graph.Graph {
 	bD := g.CreateNode(D)
 	bL := g.CreateNode(L)
 
-	bA.AddEdge(bU, 1).AddProperty("dir", L).SetNodeValueFunction(getEdgeNodeValueFunction())
 	bA.AddEdge(bR, 1).AddProperty("dir", D).SetNodeValueFunction(getEdgeNodeValueFunction())
+	bA.AddEdge(bU, 1).AddProperty("dir", L).SetNodeValueFunction(getEdgeNodeValueFunction())
 
-	bR.AddEdge(bD, 1).AddProperty("dir", L).SetNodeValueFunction(getEdgeNodeValueFunction())
 	bR.AddEdge(bA, 1).AddProperty("dir", U).SetNodeValueFunction(getEdgeNodeValueFunction())
+	bR.AddEdge(bD, 1).AddProperty("dir", L).SetNodeValueFunction(getEdgeNodeValueFunction())
 
 	bU.AddEdge(bA, 1).AddProperty("dir", R).SetNodeValueFunction(getEdgeNodeValueFunction())
 	bU.AddEdge(bD, 1).AddProperty("dir", D).SetNodeValueFunction(getEdgeNodeValueFunction())
 
+	bD.AddEdge(bU, 1).AddProperty("dir", U).SetNodeValueFunction(getEdgeNodeValueFunction())
 	bD.AddEdge(bR, 1).AddProperty("dir", R).SetNodeValueFunction(getEdgeNodeValueFunction())
 	bD.AddEdge(bL, 1).AddProperty("dir", L).SetNodeValueFunction(getEdgeNodeValueFunction())
-	bD.AddEdge(bU, 1).AddProperty("dir", U).SetNodeValueFunction(getEdgeNodeValueFunction())
 
 	bL.AddEdge(bD, 1).AddProperty("dir", R).SetNodeValueFunction(getEdgeNodeValueFunction())
 
