@@ -42,6 +42,23 @@ func CartesianProduct[T any](sets [][]T) [][]T {
 	return result
 }
 
+func FilterArray[T comparable](array []T, exclude []T) []T {
+	ex := make(map[T]bool)
+	for _, x := range exclude {
+		ex[x] = true
+	}
+
+	values := make([]T, 0, len(array))
+
+	for _, v := range array {
+		if _, e := ex[v]; !e {
+			values = append(values, v)
+		}
+	}
+
+	return values
+}
+
 type IntNumber interface {
 	int | int32 | int64
 }
