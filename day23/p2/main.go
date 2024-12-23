@@ -36,8 +36,6 @@ func GetConnectedNodeListForNode(n *graph.Node) ConnectedNodeList {
 	return l
 }
 
-// ce,ch,fc,he,hk,ji,jm,ns,qj,vv,yl,zy   <- not right
-// do,dp,dq,es,ij,kh,lb,mj,ob,qw,sf,zi
 func main() {
 	g := getGraph("../data.txt")
 	fmt.Println("node count", g.Len())
@@ -45,7 +43,7 @@ func main() {
 
 	for _, n := range g.GetNodes() {
 		cnl := GetConnectedNodeListForNode(n)
-		fmt.Println(n.GetID().(string), len(cnl), cnl.String())
+		fmt.Println("checking node ", n.GetID().(string), "with ", len(cnl), " connected nodes ", cnl.String())
 
 	nextList:
 		for len(cnl) > 0 {
@@ -54,7 +52,7 @@ func main() {
 				checkList := ConnectedNodeList(common.FilterArray(cnl, ConnectedNodeList{o}))
 				for _, cn := range checkList {
 					if !slices.Contains(ocnl, cn) {
-						cnl = checkList
+						cnl = ConnectedNodeList(common.FilterArray(cnl, ConnectedNodeList{cn})) //checkList
 						continue nextList
 					}
 				}
