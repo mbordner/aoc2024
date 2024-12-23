@@ -21,26 +21,79 @@ const (
 	U = "^"
 )
 
+var (
+	numPadGraph = getNumPadGraph()
+	dirPadGraph = getDirPadGraph()
+)
+
 // 177830 too high
 // 183830 too high
 
 // 182112 too high
 // 182810 not right
 func main() {
-	numPadGraph := getNumPadGraph()
-	dirPadGraph := getDirPadGraph()
-	fmt.Println(numPadGraph.Len(), dirPadGraph.Len())
 
 	lines, _ := file.GetLines("../test.txt")
 
 	sum := 0
 
+	//for _, line := range lines {
+	//	seqs := getSequencesForSequence(numPadGraph, line)
+	//	for _, seq := range seqs {
+	//		seqs2 := getSequencesForSequence(dirPadGraph, seq)
+	//		fmt.Println(seq, seqs2)
+	//	}
+	//	break
+	//}
+
 	for _, line := range lines {
-		getSequencesForSequence(numPadGraph, line)
+		seq := "A" + line
+		var sequences []string
+		for i := 0; i < len(seq)-1; i++ {
+			sequences = combineSequences(sequences, getPathSeq(seq[i:i+2], 2))
+		}
+
+		fmt.Println(sequences)
+		fmt.Println(len(sequences), len(sequences[0]))
+		break
 	}
 
 	fmt.Printf("\n\nAnswer: %d\n", sum)
 
+}
+
+type DepthSequence struct {
+	s string
+	d int
+}
+
+var (
+	memDepthSequence = make(map[DepthSequence][]string)
+)
+
+func getPathSeq(sequence string, depth int) []string {
+	if s, e := memDepthSequence[DepthSequence{sequence, depth}]; e {
+		return s
+	}
+	if depth == 0 {
+		return getPathsForSequence(numPadGraph, sequence)
+	}
+	prevSequences := getPathSeq(sequence, depth-1)
+	var nextSequences []string
+	for _, prevSeq := range prevSequences {
+		var sequences []string
+		seq := "A" + prevSeq
+		for i := 0; i < len(seq)-1; i++ {
+			sequences = combineSequences(sequences, getPathsForSequence(dirPadGraph, seq[i:i+2]))
+		}
+		if len(nextSequences) == 0 || len(sequences[0]) < len(nextSequences[0]) {
+			nextSequences = sequences
+		} else if len(sequences[0]) == len(nextSequences[0]) {
+			nextSequences = append(nextSequences, sequences...)
+		}
+	}
+	memDepthSequence[DepthSequence{sequence, depth}] = nextSequences
+	return nextSequences
 }
 
 func pretty(s string) string {
@@ -88,36 +141,38 @@ func getPathsForSequence(g *graph.Graph, seq string) []string {
 
 	var sequences []string
 
+	type state struct {
+		n   *graph.Node
+		seq string
+	}
+
 	for i := 0; i < len(seq)-1; i++ {
 
-		queue := make(common.Queue[graph.NodeValue], 0, g.Len())
-		visited := make(graph.VisitedNodes, 0, g.Len())
+		queue := make(common.Queue[state], 0, g.Len())
 
 		start := g.GetNode(seq[i : i+1])
 		goal := g.GetNode(seq[i+1 : i+2])
 
-		queue.Enqueue(graph.NodeValue{Node: start, Value: 0})
+		queue.Enqueue(state{n: start, seq: ""})
 
 		for !queue.Empty() {
 			cur := *(queue.Dequeue())
-			if cur.Node == goal {
-				solution := []string{cur.EdgeTaken.GetProperty("dir").(string)}
-				for c := cur.PreviousNodeValue; c != nil && c.EdgeTaken != nil; c = c.PreviousNodeValue {
-					solution = append([]string{c.EdgeTaken.GetProperty("dir").(string)}, solution...)
-				}
-				sequence := strings.Join(solution, "")
-				if len(sequences) == 0 || len(sequence) == len(sequences[0]) {
-					sequences = append(sequences, sequence)
+			if cur.n == goal {
+				seqWithA := cur.seq + "A"
+				if len(sequences) == 0 || len(seqWithA) == len(sequences[0]) {
+					sequences = append(sequences, seqWithA)
+				} else if len(seqWithA) < len(sequences[0]) {
+					sequences = []string{seqWithA}
 				} else {
 					break
 				}
 			} else {
-				edges := cur.Node.GetTraversableEdges()
+				edges := cur.n.GetTraversableEdges()
 				for _, edge := range edges {
 					dest := edge.GetDestination()
-					if !visited.Contains(dest) {
-						visited = append(visited, dest)
-						queue.Enqueue(graph.NodeValue{Node: dest, EdgeTaken: edge, PreviousNodeValue: &cur, PreviousNode: cur.Node, Value: 1})
+					destSeq := cur.seq + edge.GetProperty("dir").(string)
+					if len(sequences) == 0 || len(destSeq) <= len(sequences[0]) {
+						queue.Enqueue(state{n: dest, seq: destSeq})
 					}
 				}
 			}
@@ -129,6 +184,9 @@ func getPathsForSequence(g *graph.Graph, seq string) []string {
 }
 
 func combineSequences(previousSequences, newSequences []string) []string {
+	if len(previousSequences) == 0 {
+		return newSequences
+	}
 	product := common.CartesianProduct([][]string{previousSequences, newSequences})
 	sequences := make([]string, len(product))
 	for i, p := range product {
