@@ -26,16 +26,9 @@ var (
 	dirPadGraph = getDirPadGraph()
 )
 
-// 177830 too high
-// 183830 too high
-
-// 182112 too high
-// 182810 not right
 func main() {
 
-	lines, _ := file.GetLines("../test.txt")
-
-	sum := 0
+	lines, _ := file.GetLines("../data.txt")
 
 	//for _, line := range lines {
 	//	seqs := getSequencesForSequence(numPadGraph, line)
@@ -46,16 +39,29 @@ func main() {
 	//	break
 	//}
 
+	sum := 0
+
+	//checkValues := []string{
+	//	`<vA<AA>>^AvAA<^A>A<v<A>>^AvA^A<vA>^A<v<A>^A>AAvA^A<v<A>A>^AAAvA<^A>A`,
+	//	`<v<A>>^AAAvA^A<vA<AA>>^AvAA<^A>A<v<A>A>^AAAvA<^A>A<vA>^A<A>A`,
+	//	`<v<A>>^A<vA<A>>^AAvAA<^A>A<v<A>>^AAvA^A<vA>^AA<A>A<v<A>A>^AAAvA<^A>A`,
+	//	`<v<A>>^AA<vA<A>>^AAvAA<^A>A<vA>^A<A>A<vA>^A<A>A<v<A>A>^AAvA<^A>A`,
+	//	`<v<A>>^AvA^A<vA<AA>>^AAvA<^A>AAvA^A<vA>^AA<A>A<v<A>A>^AAAvA<^A>A`,
+	//}
+
 	for _, line := range lines {
 		seq := "A" + line
 		var sequences []string
 		for i := 0; i < len(seq)-1; i++ {
 			sequences = combineSequences(sequences, getPathSeq(seq[i:i+2], 2))
 		}
-
-		fmt.Println(sequences)
-		fmt.Println(len(sequences), len(sequences[0]))
-		break
+		//if !slices.Contains(sequences, checkValues[i]) {
+		//	fmt.Println(sequences)
+		//	fmt.Println(line, "doesn't have check value: ", checkValues[i])
+		//} else if len(checkValues[i]) != len(sequences[0]) {
+		//	fmt.Println(line, "doesn't produce the correct length", len(checkValues[i]))
+		//}
+		sum += len(sequences[0]) * getNumVal(line)
 	}
 
 	fmt.Printf("\n\nAnswer: %d\n", sum)
@@ -90,6 +96,8 @@ func getPathSeq(sequence string, depth int) []string {
 			nextSequences = sequences
 		} else if len(sequences[0]) == len(nextSequences[0]) {
 			nextSequences = append(nextSequences, sequences...)
+		} else {
+			// we're leaving off some possibilities here, can we really do this?  not sure
 		}
 	}
 	memDepthSequence[DepthSequence{sequence, depth}] = nextSequences
