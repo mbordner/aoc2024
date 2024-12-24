@@ -27,6 +27,7 @@ var (
 	reWire = regexp.MustCompile(`(.*):\s+(1|0)\s*`)
 	reGate = regexp.MustCompile(`(.*)\s+(AND|XOR|OR)\s+(.*)\s+->\s(.*)`)
 	reZVal = regexp.MustCompile(`z0*(\d+)`)
+	mu     sync.Mutex
 )
 
 const (
@@ -36,17 +37,32 @@ const (
 	OR
 )
 
+type Connector struct {
+	wires  WireValues
+	name   string
+	inputs []chan int
+}
+
+func (c *Connector) Send(val int) {
+	mu.Lock()
+	c.wires[c.name] = val
+	for i := range c.inputs {
+		c.inputs[i] <- val
+	}
+	mu.Unlock()
+}
+
 type WireValues map[string]int
 
-type Wires map[string]chan int
+type Wires map[string]*Connector
 
 type Gate struct {
-	gateType   GateType
-	inputNames []string
-	outputName string
-	done       chan<- bool
-	inputWires []<-chan int
-	outputWire chan<- int
+	gateType        GateType
+	inputNames      []string
+	outputName      string
+	done            chan<- bool
+	inputWires      []<-chan int
+	outputConnector *Connector
 }
 
 func (g *Gate) String() string {
@@ -59,7 +75,6 @@ func (g *Gate) Eval(wireValues WireValues) {
 	for i := 0; i < 2; i++ {
 		select {
 		case i0 = <-g.inputWires[0]:
-
 			fmt.Printf("gate (%s) received input 1: %d\n", g.String(), i0)
 		case i1 = <-g.inputWires[1]:
 			fmt.Printf("gate (%s) received input 2: %d\n", g.String(), i1)
@@ -77,16 +92,13 @@ func (g *Gate) Eval(wireValues WireValues) {
 		val = i0 | i1
 	}
 
-	wireValues[g.outputName] = val
-
 	fmt.Printf("gate (%s) sent output (%s) val: %d\n", g.String(), g.outputName, val)
-
-	g.outputWire <- val
 	g.done <- true
+	g.outputConnector.Send(val)
 }
 
 func main() {
-	initialWires, wires, gates, doneChannel := getData("../test.txt")
+	initialWires, wires, gates, doneChannel := getData("../data.txt")
 
 	var z int
 	var wg sync.WaitGroup
@@ -99,27 +111,31 @@ func main() {
 		}
 	}
 
-	for _, w := range zWires {
-		go func(wg *sync.WaitGroup, zChanName string, zChan <-chan int) {
+	for i := range zWires {
+		zWireName := zWires[i]
+		zInput := make(chan int)
+		wires[zWireName].inputs = append(wires[zWireName].inputs, zInput)
+		matches := reZVal.FindStringSubmatch(zWireName)
+		zBit := getIntVal(matches[1])
+		go func(wg *sync.WaitGroup, zWireName string, zBit int, zChan chan int) {
 			zBitVal := <-zChan
-			matches := reZVal.FindStringSubmatch(zChanName)
-			zBit := getIntVal(matches[1])
+			fmt.Println("got z value:", zWireName, zBitVal)
 			zBitVal <<= zBit
 			z |= zBitVal
 			wg.Done()
-		}(&wg, w, wires[w])
+		}(&wg, zWireName, zBit, zInput)
 	}
 
 	for n, v := range initialWires {
-		wires[n] <- v
+		wires[n].Send(v)
 	}
-
-	wg.Wait()
 
 	for i := 0; i < len(gates); i++ {
 		<-doneChannel
 		fmt.Println("gate done")
 	}
+
+	wg.Wait()
 
 	fmt.Println("done")
 
@@ -160,18 +176,26 @@ func getData(f string) (WireValues, Wires, []*Gate, chan bool) {
 
 	wires := make(Wires)
 
+	for wire := range wireValues {
+		if _, e := wires[wire]; !e {
+			wires[wire] = &Connector{wires: wireValues, name: wire, inputs: []chan int{}}
+		}
+	}
+
+	for _, gate := range gates {
+		if _, e := wires[gate.outputName]; !e {
+			wires[gate.outputName] = &Connector{wires: wireValues, name: gate.outputName, inputs: []chan int{}}
+			gate.outputConnector = wires[gate.outputName]
+		}
+	}
+
 	for _, gate := range gates {
 		gate.inputWires = make([]<-chan int, len(gate.inputNames))
 		for i, input := range gate.inputNames {
-			if _, e := wires[input]; !e {
-				wires[input] = make(chan int)
-			}
-			gate.inputWires[i] = wires[input]
+			intChan := make(chan int)
+			gate.inputWires[i] = intChan
+			wires[input].inputs = append(wires[input].inputs, intChan)
 		}
-		if _, e := wires[gate.outputName]; !e {
-			wires[gate.outputName] = make(chan int)
-		}
-		gate.outputWire = wires[gate.outputName]
 
 		go gate.Eval(wireValues)
 	}
