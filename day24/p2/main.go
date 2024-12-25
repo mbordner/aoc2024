@@ -2,13 +2,18 @@ package main
 
 import (
 	"fmt"
+	"github.com/mbordner/aoc2024/common"
 	"github.com/mbordner/aoc2024/common/file"
+	"math"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
 )
+
+type GatePairs map[*Gate]*Gate
 
 type GateType int
 
@@ -289,8 +294,94 @@ func getIntVal(s string) int64 {
 	return val
 }
 
+func getBitArray(val int64, bits int) []int64 {
+	vals := make([]int64, bits)
+	for i := 0; i < bits; i++ {
+		if (val & (1 << i)) != 0 {
+			vals[i] = 1
+		} else {
+			vals[i] = 0
+		}
+	}
+	return vals
+}
+
+func getAllBitGates(root *Gate) Gates {
+	gates := Gates{root}
+	for _, ig := range root.inputGates {
+		if ig != nil {
+			gates = append(gates, getAllBitGates(ig)...)
+		}
+	}
+	return gates
+}
+
 func main() {
 	data()
+
+}
+
+func solve1() {
+	initialWires, wires, gates, doneChannel := getData("../data.txt")
+
+	numBits := 46
+	expected := int64(math.Pow(2, float64(numBits)))
+	expectedBits := getBitArray(expected, numBits)
+
+	initialWires.SetBitMap("x", expected-1) // 2^46 - 1
+	initialWires.SetBitMap("y", expected-1)
+
+	zGates := make(Gates, numBits)
+	for i := range zGates {
+		zName := fmt.Sprintf("z%02d", i)
+		zGates[i] = gates.GetInputGate(zName)
+	}
+
+	swaps := make(GatePairs)
+
+	z := int64(0)
+
+	bPtr := 0
+
+	for z != expected {
+		z = calculate(initialWires, wires, gates, doneChannel)
+		zs := getBitArray(z, 46)
+		for ; bPtr < len(zs); bPtr++ {
+			if zs[bPtr] != expectedBits[bPtr] {
+
+				bitGate := zGates[bPtr]
+				bitGates := getAllBitGates(bitGate)
+
+				bigGatePairSets := common.GetPairSets(bitGates)
+				for _, p := range bigGatePairSets {
+					if slices.Contains(p[0].inputNames, p[1].outputConnector.name) ||
+						slices.Contains(p[1].inputNames, p[0].outputConnector.name) {
+						continue // would create a loop
+					}
+					p[0].outputConnector, p[1].outputConnector = p[1].outputConnector, p[0].outputConnector
+					tz := calculate(initialWires, wires, gates, doneChannel)
+					tzs := getBitArray(tz, 46)
+					if tzs[bPtr] == expectedBits[bPtr] {
+						swaps[p[0]] = p[1]
+						z = tz
+						zs = tzs
+						break
+					} else {
+						// swap back
+						p[1].outputConnector, p[0].outputConnector = p[0].outputConnector, p[1].outputConnector
+					}
+				}
+
+				fmt.Println(len(bigGatePairSets))
+			}
+		}
+
+	}
+
+	fmt.Println(len(swaps))
+
+	fmt.Printf("z: %064b\n", z)
+	fmt.Printf("done")
 }
 
 func data() {
