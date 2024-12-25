@@ -63,6 +63,32 @@ func (gs Gates) GetInputGate(outputName string) *Gate {
 	return nil
 }
 
+func (g *Gate) PrintWithWireValues(wireValues WireValues) {
+
+	indent := func(c int) string {
+		return strings.Repeat("  ", c)
+	}
+
+	var gateTreePrinter func(g *Gate, depth int)
+
+	gateTreePrinter = func(g *Gate, depth int) {
+		ia := depth * 2
+		fmt.Printf("%s%s(%d) <- %s (%p) <- \n", indent(ia), g.outputName, wireValues[g.outputName], g.gateType.String(), g)
+		if g.inputGates[0] != nil {
+			gateTreePrinter(g.inputGates[0], depth+1)
+		} else {
+			fmt.Printf("%s<- %s(%d)\n", indent((depth+1)*2+2), g.inputNames[1], wireValues[g.inputNames[1]])
+		}
+		if g.inputGates[1] != nil {
+			gateTreePrinter(g.inputGates[1], depth+1)
+		} else {
+			fmt.Printf("%s<- %s(%d)\n", indent((depth+1)*2+2), g.inputNames[0], wireValues[g.inputNames[0]])
+		}
+	}
+
+	gateTreePrinter(g, 0)
+}
+
 func (t GateType) String() string {
 	switch t {
 	case AND:
@@ -316,11 +342,6 @@ func getAllBitGates(root *Gate) Gates {
 	return gates
 }
 
-func main() {
-	data()
-
-}
-
 func solve1() {
 	initialWires, wires, gates, doneChannel := getData("../data.txt")
 
@@ -384,6 +405,27 @@ func solve1() {
 	fmt.Printf("done")
 }
 
+func (gs Gates) swap(wires Wires, g1output, g2output string) {
+	var g1, g2 *Gate
+	for g := range gs {
+		if gs[g].outputName == g1output {
+			g1 = gs[g]
+		}
+		if gs[g].outputName == g2output {
+			g2 = gs[g]
+		}
+	}
+
+	g1.outputName, g2.outputName = g2.outputName, g1.outputName
+	g1.outputConnector, g2.outputConnector = g2.outputConnector, g1.outputConnector
+
+	for _, g := range gs {
+		for inputIndex, inputName := range g.inputNames {
+			g.inputGates[inputIndex] = gs.GetInputGate(inputName)
+		}
+	}
+}
+
 func data() {
 	initialWires, wires, gates, doneChannel := getData("../data.txt")
 
@@ -406,21 +448,40 @@ func data() {
 	}
 
 	z := calculate(initialWires, wires, gates, doneChannel)
-
 	fmt.Printf("z: %064b\n", z)
-	fmt.Printf("done")
+
+	for i := range zGates {
+		fmt.Printf("============== z%02d ====================\n", i)
+		zGates[i].PrintWithWireValues(initialWires)
+	}
+
 }
 
 func test3() {
 	initialWires, wires, gates, doneChannel := getData("../test3.txt")
 
-	gates[0].outputConnector, gates[5].outputConnector = gates[5].outputConnector, gates[0].outputConnector
-	gates[1].outputConnector, gates[2].outputConnector = gates[2].outputConnector, gates[1].outputConnector
+	gates.swap(wires, "z00", "z05")
+	gates.swap(wires, "z01", "z02")
 
 	x := initialWires.GetBitMap("x")
 	y := initialWires.GetBitMap("y")
 
+	zGates := make(Gates, 6)
+	for i := range zGates {
+		zName := fmt.Sprintf("z%02d", i)
+		zGates[i] = gates.GetInputGate(zName)
+	}
+
 	z := calculate(initialWires, wires, gates, doneChannel)
 
 	fmt.Printf("x: %064b\ny: %064b\nz: %064b\n", x, y, z)
+
+	for i := range zGates {
+		fmt.Printf("============== z%02d ====================\n", i)
+		zGates[i].PrintWithWireValues(initialWires)
+	}
+}
+
+func main() {
+	data()
 }
