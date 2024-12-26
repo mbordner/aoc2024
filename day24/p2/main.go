@@ -74,15 +74,25 @@ func (g *Gate) PrintWithWireValues(wireValues WireValues) {
 	gateTreePrinter = func(g *Gate, depth int) {
 		ia := depth * 2
 		fmt.Printf("%s%s(%d) <- %s (%p) <- \n", indent(ia), g.outputName, wireValues[g.outputName], g.gateType.String(), g)
-		if g.inputGates[0] != nil {
-			gateTreePrinter(g.inputGates[0], depth+1)
-		} else {
-			fmt.Printf("%s<- %s(%d)\n", indent((depth+1)*2+2), g.inputNames[1], wireValues[g.inputNames[1]])
+		i, j := 0, 1
+		if g.inputGates[j] != nil {
+			if (g.inputGates[j].gateType == XOR || g.inputGates[j].gateType == OR) && g.inputGates[i].gateType != XOR {
+				j, i = i, j
+			} else if g.inputGates[j].gateType == AND && g.inputGates[i].gateType == AND && (g.inputGates[j].inputGates[0] != nil || g.inputGates[j].inputGates[1] != nil) {
+				j, i = i, j
+			}
+
 		}
-		if g.inputGates[1] != nil {
-			gateTreePrinter(g.inputGates[1], depth+1)
+
+		if g.inputGates[i] != nil {
+			gateTreePrinter(g.inputGates[i], depth+1)
 		} else {
-			fmt.Printf("%s<- %s(%d)\n", indent((depth+1)*2+2), g.inputNames[0], wireValues[g.inputNames[0]])
+			fmt.Printf("%s<- %s(%d)\n", indent((depth+1)*2+2), g.inputNames[i], wireValues[g.inputNames[i]])
+		}
+		if g.inputGates[j] != nil {
+			gateTreePrinter(g.inputGates[j], depth+1)
+		} else {
+			fmt.Printf("%s<- %s(%d)\n", indent((depth+1)*2+2), g.inputNames[j], wireValues[g.inputNames[j]])
 		}
 	}
 
@@ -429,12 +439,38 @@ func (gs Gates) swap(wires Wires, g1output, g2output string) {
 func data() {
 	initialWires, wires, gates, doneChannel := getData("../data.txt")
 
-	for g := range gates {
-		fmt.Printf("gate %03d: %s\n", g, gates[g].String())
-	}
+	gates.swap(wires, "hmk", "z16")
 
-	initialWires.SetBitMap("x", int64(70368744177663)) // 2^46 - 1
-	initialWires.SetBitMap("y", int64(70368744177663))
+	gates.swap(wires, "z20", "fhp")
+
+	gates.swap(wires, "tpc", "rvf")
+
+	gates.swap(wires, "z33", "fcd")
+
+	//gates.swap(wires, "pgp", "scf")
+
+	//gates.swap(wires, "fmg", "mbp")
+	//gates.swap(wires, "z33", "smf")
+
+	//gates.swap(wires, "hmk", "z16") // at test bit 16
+	//gates.swap(wires, "hwg", "wbg")
+	//gates.swap(wires, "qpp", "qgq")
+	//gates.swap(wires, "fdg", "tqw")
+	//gates.swap(wires, "mpw", "fdg")
+	//gates.swap(wires, "tqw", "mpw")
+	//gates.swap(wires, "tqv", "nbj")
+	//gates.swap(wires, "hmk", "ndj")
+	//gates.swap(wires, "fhp", "z20")
+	//gates.swap(wires, "ncf", "vcj")
+	//gates.swap(wires, "tpc", "rvf")
+
+	//for g := range gates {
+	//	fmt.Printf("gate %03d: %s\n", g, gates[g].String())
+	//}
+
+	testBit := 45
+	initialWires.SetBitMap("y", int64(1)<<testBit-1) // 2^46 - 1
+	initialWires.SetBitMap("x", int64(1)<<testBit-1)
 
 	x := initialWires.GetBitMap("x")
 	y := initialWires.GetBitMap("y")
