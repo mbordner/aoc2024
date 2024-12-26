@@ -54,6 +54,20 @@ const (
 	OR
 )
 
+func (gp GatePairs) Add(g1, g2 *Gate) {
+	gp[g1] = g2
+}
+
+func (gp GatePairs) GetSwapOutputs() []string {
+	swaps := make([]string, 0, len(gp)*2)
+	for k, v := range gp {
+		swaps = append(swaps, k.outputName)
+		swaps = append(swaps, v.outputName)
+	}
+	sort.Strings(swaps)
+	return swaps
+}
+
 func (gs Gates) GetInputGate(outputName string) *Gate {
 	for _, g := range gs {
 		if g.outputName == outputName {
@@ -415,7 +429,7 @@ func solve1() {
 	fmt.Printf("done")
 }
 
-func (gs Gates) swap(wires Wires, g1output, g2output string) {
+func (gs Gates) swap(wires Wires, g1output, g2output string) (*Gate, *Gate) {
 	var g1, g2 *Gate
 	for g := range gs {
 		if gs[g].outputName == g1output {
@@ -434,35 +448,22 @@ func (gs Gates) swap(wires Wires, g1output, g2output string) {
 			g.inputGates[inputIndex] = gs.GetInputGate(inputName)
 		}
 	}
+
+	return g1, g2
 }
 
-func data() {
+func solve() {
 	initialWires, wires, gates, doneChannel := getData("../data.txt")
 
-	gates.swap(wires, "hmk", "z16")
+	swaps := make(GatePairs)
 
-	gates.swap(wires, "z20", "fhp")
+	swaps.Add(gates.swap(wires, "hmk", "z16"))
+	swaps.Add(gates.swap(wires, "z20", "fhp"))
+	swaps.Add(gates.swap(wires, "tpc", "rvf"))
+	swaps.Add(gates.swap(wires, "z33", "fcd"))
 
-	gates.swap(wires, "tpc", "rvf")
-
-	gates.swap(wires, "z33", "fcd")
-
-	//gates.swap(wires, "pgp", "scf")
-
-	//gates.swap(wires, "fmg", "mbp")
-	//gates.swap(wires, "z33", "smf")
-
-	//gates.swap(wires, "hmk", "z16") // at test bit 16
-	//gates.swap(wires, "hwg", "wbg")
-	//gates.swap(wires, "qpp", "qgq")
-	//gates.swap(wires, "fdg", "tqw")
-	//gates.swap(wires, "mpw", "fdg")
-	//gates.swap(wires, "tqw", "mpw")
-	//gates.swap(wires, "tqv", "nbj")
-	//gates.swap(wires, "hmk", "ndj")
-	//gates.swap(wires, "fhp", "z20")
-	//gates.swap(wires, "ncf", "vcj")
-	//gates.swap(wires, "tpc", "rvf")
+	fmt.Println("Swaps:")
+	fmt.Println(strings.Join(swaps.GetSwapOutputs(), ","))
 
 	//for g := range gates {
 	//	fmt.Printf("gate %03d: %s\n", g, gates[g].String())
@@ -519,5 +520,5 @@ func test3() {
 }
 
 func main() {
-	data()
+	solve()
 }
